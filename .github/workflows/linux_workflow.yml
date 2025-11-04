@@ -77,9 +77,12 @@ jobs:
           pip3 install --upgrade pip
           pip3 install aqtinstall
 
-      - name: Install Qt 6.5.3
+      - name: Install Qt 6.5.3 (+Charts)
         run: |
-          aqt install-qt linux desktop 6.5.3 gcc_64 --outputdir Qt
+          aqt install-qt linux desktop 6.5.3 gcc_64 \
+            --modules qtcharts \
+            --outputdir Qt
+
 
       - name: Configure CMake
         run: |
