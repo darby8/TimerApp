@@ -5,7 +5,7 @@ project(project-overwatch VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Charts Sql Network)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 
 # set_target_properties(MyApp PROPERTIES
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
@@ -52,7 +52,6 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES icons/email.svg
     RESOURCES icons/eye.svg
     RESOURCES icons/github.svg
-    RESOURCES
     RESOURCES icons/lock.svg
     RESOURCES icons/microsoft.svg
     RESOURCES icons/logout.svg
