@@ -1,4 +1,4 @@
-name: Build Qt App (Windows)
+name: Linux Qt Build
 
 on:
   push:
@@ -6,78 +6,158 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest
-
-    env:
-      BUILD_DIR: build
-      INSTALLER_SRC: installer/input
-      QT_VERSION: 6.8.3   # ensure matching installed version
-      QT_MODULES: qtmultimedia
-      GENERATOR: "Visual Studio 17 2022"
+  linux-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Install dependencies (Ninja + NSIS)
+      - name: Prepare Environment (no timezone prompt)
         run: |
-          choco install ninja -y
-          choco install nsis -y
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y tzdata locales
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
 
-      - name: Set up Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: windows
-          target: desktop
-          arch: win64_msvc2022_64
-          modules: ${{ env.QT_MODULES }}
-          cache: true
+      - name: Install base dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            patchelf \
+            wget \
+            curl \
+            libglu1-mesa-dev \
+            libegl1-mesa-dev \
+            libgl1-mesa-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libglib2.0-0 libglib2.0-dev \
+            libdbus-1-dev \
+            libfontconfig1-dev \
+            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1
+            
+            
+      - name: Install required X11/XCB libraries
+        run: |
+          apt-get install -y \
+            libxrender1 \
+            libxrandr2 \
+            libegl1 \
+            libglu1-mesa \
+            libgl1-mesa-dev \
+            libxcb-render-util0 \
+            libxcb-render0 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-icccm4 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-sync1 \
+            libxcb-randr0 \
+            libxcb-util1 \
+            libxcb-xinerama0 \
+            libxcb-cursor0 \
+            libxcb1-dev
+
+
+      - name: Install PostgreSQL runtime (fixes libpq.so.5 not found)
+        run: |
+          apt-get install -y libpq-dev libpq5
+
+      - name: Install Python & aqt
+        run: |
+          apt-get install -y python3 python3-pip
+          pip3 install --upgrade pip
+          pip3 install aqtinstall
+
+      - name: Install Qt 6.5.3
+        run: |
+          aqt install-qt linux desktop 6.5.3 gcc_64 --outputdir Qt
 
       - name: Configure CMake
-        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build (Release)
-        run: cmake --build ${{ env.BUILD_DIR }} --config Release
-
-      # ✅ Find the actual .exe created by the build and deploy Qt libs
-      - name: Bundle Qt dependencies
-        shell: pwsh
         run: |
-          $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/6.5.3/gcc_64 \
+            -DCMAKE_BUILD_TYPE=Release
 
-          Write-Host "✅ Found executable: $($EXE.FullName)"
+      - name: Build
+        run: cmake --build build --parallel
 
-          # Direct call, avoids variable path issues
-          windeployqt.exe --release --qmldir . "$($EXE.FullName)"
-
-      - name: Prepare installer folder
-        shell: pwsh
+      - name: Detect built executable
+        id: findexe
         run: |
-          New-Item -ItemType Directory -Force -Path install | Out-Null
-          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
+          EXE=$(find build -maxdepth 2 -type f -executable | head -n 1)
+          echo "EXE=$EXE" >> $GITHUB_ENV
+          echo "Found executable: $EXE"
 
-
-
-      # ✅ Prepare installer payload folder
-      - name: Create installer source folder
-        shell: pwsh
+      - name: Create AppDir structure
         run: |
-          New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
-          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp "$EXE" AppDir/usr/bin/MyQtApp
+          chmod +x AppDir/usr/bin/MyQtApp
 
-      # ✅ Build the NSIS Installer
-      - name: Build installer
-        shell: pwsh
+          cp deploy/app.png AppDir/usr/share/icons/hicolor/256x256/apps/MyQtApp.png
+
+          cat <<EOF > AppDir/usr/share/applications/MyQtApp.desktop
+          [Desktop Entry]
+          Name=My Qt App
+          Exec=MyQtApp
+          Icon=MyQtApp
+          Type=Application
+          Categories=Utility;
+          EOF
+
+      - name: Download linuxdeploy & qt plugin
         run: |
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
 
-      # ✅ Upload installer artifact
-      - name: Upload installer
+      - name: Download linuxdeployqt (no fuse mode)
+        run: |
+          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
+          chmod +x linuxdeployqt
+
+      - name: Install MySQL Libraries
+        run: |
+           apt-get update
+           apt-get install -y libmysqlclient-dev
+           
+           
+      - name: Make linuxdeployqt executable
+        run: chmod +x linuxdeployqt
+
+      - name: Install unixODBC runtime
+        run: |
+          apt-get update
+          apt-get install -y unixodbc unixodbc-dev odbcinst odbcinst1debian2
+
+
+      - name: Build AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          export PATH="$GITHUB_WORKSPACE/Qt/6.5.3/gcc_64/bin:$PATH"
+          chmod +x linuxdeployqt
+          ./linuxdeployqt AppDir/usr/share/applications/MyQtApp.desktop \
+            -bundle-non-qt-libs \
+            -extra-plugins=imageformats/libqsvg.so \
+            -extra-plugins=sqldrivers/libqsqlmysql.so \
+            -appimage
+
+
+
+      - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-Installer
-          path: "*.exe"
+          name: MyQtApp-Linux-AppImage
+          path: "*.AppImage"
+
 
