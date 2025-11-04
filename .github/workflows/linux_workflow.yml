@@ -71,19 +71,18 @@ jobs:
         run: |
           apt-get install -y libpq-dev libpq5
 
-      - name: Install Python & aqtinstall
+      - name: Install Python & AQT (Correct Version)
         run: |
+          apt-get install -y python3 python3-pip
           python3 -m pip install --upgrade pip
-          python3 -m pip install aqtinstall==3.3.1
+          python3 -m pip install "aqtinstall==3.3.1"
 
 
-
-      - name: Install Qt 6.5.3
+      - name: Install Qt 6.5.3 + Required Modules
         run: |
           aqt install-qt linux desktop 6.5.3 gcc_64 \
             --outputdir $GITHUB_WORKSPACE/Qt \
-            --modules qtcharts
-
+            --modules declarative quickcontrols2 charts
 
 
 
