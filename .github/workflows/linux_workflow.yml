@@ -84,6 +84,16 @@ jobs:
             --outputdir Qt
 
 
+
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+
+
+	
+
       - name: Configure CMake
         run: |
           cmake -S . -B build -G Ninja \
