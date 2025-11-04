@@ -74,14 +74,15 @@ jobs:
       - name: Install Python & AQT
         run: |
           apt-get install -y python3 python3-pip
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade aqtinstall
+          python3 -m pip install --upgrade pip wheel setuptools
+          python3 -m pip install --upgrade "aqtinstall>=3.2.0"
 
       - name: Install Qt 6.5.3 + Required Modules
         run: |
           aqt install-qt linux desktop 6.5.3 gcc_64 \
             --outputdir $GITHUB_WORKSPACE/Qt \
             --modules declarative quickcontrols2 charts
+
 
 
 
