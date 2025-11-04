@@ -71,22 +71,15 @@ jobs:
         run: |
           apt-get install -y libpq-dev libpq5
 
-      - name: Install Python & AQT (Correct Version)
+      - name: Install Python & aqt
         run: |
           apt-get install -y python3 python3-pip
-          python3 -m pip install --upgrade pip
-          python3 -m pip install "aqtinstall==3.3.1"
+          pip3 install --upgrade pip
+          pip3 install aqtinstall
 
-
-      - name: Install Qt 6.5.3 + Required Modules
+      - name: Install Qt 6.5.3
         run: |
-          aqt install-qt linux desktop 6.5.3 gcc_64 \
-            --outputdir $GITHUB_WORKSPACE/Qt \
-            --modules declarative quickcontrols2 charts
-
-
-
-
+          aqt install-qt linux desktop 6.5.3 gcc_64 --outputdir Qt
 
       - name: Configure CMake
         run: |
