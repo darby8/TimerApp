@@ -82,17 +82,11 @@ jobs:
           aqt install-qt linux desktop 6.5.3 gcc_64 \
             --modules qtcharts \
             --outputdir Qt
-
-
-
-
+            
       - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-
-
-	
 
       - name: Configure CMake
         run: |
