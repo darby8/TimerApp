@@ -1,0 +1,83 @@
+name: Build Qt App (Windows)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      BUILD_DIR: build
+      INSTALLER_SRC: installer/input
+      QT_VERSION: 6.5.3   # ensure matching installed version
+      QT_MODULES: qtmultimedia
+      GENERATOR: "Visual Studio 17 2022"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ninja + NSIS)
+        run: |
+          choco install ninja -y
+          choco install nsis -y
+
+      - name: Set up Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Configure CMake
+        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (Release)
+        run: cmake --build ${{ env.BUILD_DIR }} --config Release
+
+      # ✅ Find the actual .exe created by the build and deploy Qt libs
+      - name: Bundle Qt dependencies
+        shell: pwsh
+        run: |
+          $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
+          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
+
+          Write-Host "✅ Found executable: $($EXE.FullName)"
+
+          # Direct call, avoids variable path issues
+          windeployqt.exe --release --qmldir . "$($EXE.FullName)"
+
+      - name: Prepare installer folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path install | Out-Null
+          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
+
+
+
+      # ✅ Prepare installer payload folder
+      - name: Create installer source folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
+          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
+
+      # ✅ Build the NSIS Installer
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
+
+      # ✅ Upload installer artifact
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Installer
+          path: "*.exe"
+
