@@ -70,6 +70,11 @@ jobs:
       - name: Install PostgreSQL runtime (fixes libpq.so.5 not found)
         run: |
           apt-get install -y libpq-dev libpq5
+          
+          
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Install Python & aqt
         run: |
@@ -83,9 +88,7 @@ jobs:
             --modules qtcharts \
             --outputdir Qt
             
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+      
 
 
       - name: Configure CMake
