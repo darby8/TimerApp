@@ -12,18 +12,7 @@ jobs:
       image: ubuntu:20.04
 
     steps:
-    
-    
-      - name: Install Git
-        run: |
-          apt-get update
-          apt-get install -y git
-
-      # 2️⃣ Now checkout WITH submodules (will work now)
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
 
       - name: Prepare Environment (no timezone prompt)
         run: |
@@ -81,22 +70,16 @@ jobs:
       - name: Install PostgreSQL runtime (fixes libpq.so.5 not found)
         run: |
           apt-get install -y libpq-dev libpq5
-          
-          
+
       - name: Install Python & aqt
         run: |
           apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall
 
-      - name: Install Qt 6.5.3 (+Charts)
+      - name: Install Qt 6.5.3
         run: |
-          aqt install-qt linux desktop 6.5.3 gcc_64 \
-            --modules qtcharts \
-            --outputdir Qt
-            
-      
-
+          aqt install-qt linux desktop 6.5.3 gcc_64 --outputdir Qt
 
       - name: Configure CMake
         run: |
