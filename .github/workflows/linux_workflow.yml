@@ -71,11 +71,12 @@ jobs:
         run: |
           apt-get install -y libpq-dev libpq5
 
-      - name: Install Python & AQT
+      - name: Install Python & AQT (Correct Version)
         run: |
           apt-get install -y python3 python3-pip
-          python3 -m pip install --upgrade pip wheel setuptools
-          python3 -m pip install --upgrade "aqtinstall>=3.2.0"
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "aqtinstall==2.2.4"
+
 
       - name: Install Qt 6.5.3 + Required Modules
         run: |
