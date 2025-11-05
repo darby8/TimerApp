@@ -1,8 +1,2 @@
-[submodule "singleapplication"]
-	path = singleapplication
-	url = https://github.com/itay-grudev/SingleApplication.git
 
 
-[submodule "vendor/libuiohook"]
-	path = vendor/libuiohook
-	url = https://github.com/kwhat/libuiohook.git
