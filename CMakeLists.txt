@@ -89,9 +89,9 @@ set_target_properties(appproject-overwatch PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-# target_include_directories(appproject-overwatch
-#     PRIVATE vendor/libuiohook/include
-# )
+target_include_directories(appproject-overwatch
+    PRIVATE C:/Users/Dheeraj Jaiswal/TimerApp/vendor/libuiohook/build/Release/uiohook.lib
+)
 
 target_link_libraries(appproject-overwatch
     PRIVATE  SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
