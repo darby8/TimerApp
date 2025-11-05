@@ -14,7 +14,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
 # )
 # libuiohook
-# add_subdirectory(vendor/libuiohook)
+add_subdirectory(vendor/libuiohook)
 set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleApplication")
 add_subdirectory(singleapplication)
 
