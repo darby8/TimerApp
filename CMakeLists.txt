@@ -7,9 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 
-
-
-
 # set_target_properties(MyApp PROPERTIES
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
 # )
