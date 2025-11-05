@@ -7,11 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 
+
+
+
 # set_target_properties(MyApp PROPERTIES
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
 # )
 # libuiohook
-add_subdirectory(vendor/libuiohook)
+# add_subdirectory(vendor/libuiohook)
 set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleApplication")
 add_subdirectory(singleapplication)
 
@@ -86,9 +89,9 @@ set_target_properties(appproject-overwatch PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-target_include_directories(appproject-overwatch
-    PRIVATE vendor/libuiohook/include
-)
+# target_include_directories(appproject-overwatch
+#     PRIVATE vendor/libuiohook/include
+# )
 
 target_link_libraries(appproject-overwatch
     PRIVATE  SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
