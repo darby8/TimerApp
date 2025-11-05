@@ -36,8 +36,8 @@ jobs:
           cache: true
 
       - name: Configure CMake
-        working-directory: ${{ github.workspace }}
-        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S ${{ github.workspace }} -A x64 -DCMAKE_BUILD_TYPE=Release
+
 
 
       - name: Build (Release)
