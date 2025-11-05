@@ -7,6 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 
+
+qt_policy(SET QTP0001 NEW)
+qt_policy(SET QTP0004 NEW)
+
+
 # set_target_properties(MyApp PROPERTIES
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
 # )

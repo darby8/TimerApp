@@ -12,7 +12,7 @@ jobs:
     env:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
-      QT_VERSION: 6.5.3   # ensure matching installed version
+      QT_VERSION: 6.8.3   # ensure matching installed version
       QT_MODULES: qtcharts qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
