@@ -90,7 +90,7 @@ set_target_properties(appproject-overwatch PROPERTIES
 )
 
 target_include_directories(appproject-overwatch
-    PRIVATE C:/Users/Dheeraj Jaiswal/TimerApp/vendor/libuiohook/build/Release/uiohook.lib
+    PRIVATE vendor/libuiohook/include
 )
 
 target_link_libraries(appproject-overwatch
