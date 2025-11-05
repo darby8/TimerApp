@@ -12,8 +12,8 @@ jobs:
     env:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
-      QT_VERSION: 6.5.3   # ensure matching installed version
-      QT_MODULES: qtmultimedia
+      QT_VERSION: 6.8.3   # ensure matching installed version
+      QT_MODULES: qtcharts qtmultimedia qtquickcontrols2
       GENERATOR: "Visual Studio 17 2022"
 
     steps:
