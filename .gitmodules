@@ -5,4 +5,4 @@
 
 [submodule "vendor/libuiohook"]
 	path = vendor/libuiohook
-	url = https://github.com/kwhat/libuiohook vendor/libuiohook
+	url = https://github.com/kwhat/libuiohook.git
