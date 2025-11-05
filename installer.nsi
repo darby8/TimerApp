@@ -1,3 +1,4 @@
+
 !define APPNAME "YourApp"
 !define COMPANY "YourCompany"
 !define VERSION "1.0.0"
