@@ -1,6 +1,6 @@
 [submodule "vendor/libuiohook"]
 	path = vendor/libuiohook
-	url = https://github.com/kwhat/libuiohook.git
+	url = https://github.com/kwhat/libuiohook
 
 [submodule "singleapplication"]
     path = singleapplication
