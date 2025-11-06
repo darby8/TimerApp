@@ -29,6 +29,7 @@ jobs:
           choco install nsis -y
 
       - name: Set up Qt
+       id: qt
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
@@ -65,7 +66,8 @@ jobs:
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
           Write-Host "Using windeployqt.exe at: $Windeploy"
 
-          & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime --no-translations
+          & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime
+
 
 
 
