@@ -45,10 +45,31 @@ jobs:
 
       - name: Configure CMake
         run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
+        
+        
+      - name: Install MSVC Redistributable
+        run: choco install vcredist140 -y
+
 
       - name: Build (Release)
-        shell: pwsh
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
+        
+        
+      - name: Verify and copy uiohook & minhook
+        shell: pwsh
+        run: |
+          $HOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\Release" -Filter "uiohook.dll" -Recurse | Select-Object -First 1
+          $MINHOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\Release" -Filter "minhook*.dll" -Recurse | Select-Object -First 1
+
+          if (-not $HOOK_DLL) { Write-Error "❌ uiohook.dll missing in Release folder (likely built Debug or x86)" }
+          if (-not $MINHOOK_DLL) { Write-Error "❌ minhook missing in Release folder" }
+
+          Write-Host "✅ libuiohook + minhook OK"
+
+
+
+        
+        
 
       # ✅ Find the actual .exe created by the build and deploy Qt libs
       - name: Bundle Qt dependencies
@@ -58,7 +79,17 @@ jobs:
           if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
-          windeployqt.exe --release --qmldir . "$($EXE.FullName)"
+
+          # Direct call, avoids variable path issues
+          $QtBin = (Get-ChildItem "C:\Qt" -Directory -Recurse | Where-Object { $_.Name -eq "bin" } | Select-Object -First 1).FullName
+          & "$QtBin\windeployqt.exe" "$($EXE.FullName)" --release --qmldir .
+
+
+
+
+
+      - name: List deployed app files (debug info)
+        run: dir install /s
 
       - name: Prepare installer folder
         shell: pwsh
