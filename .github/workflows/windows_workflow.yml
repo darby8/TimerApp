@@ -12,7 +12,7 @@ jobs:
     env:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
-      QT_VERSION: 6.8.0
+      QT_VERSION: 6.8.3
       QT_MODULES: qtmultimedia qtcharts qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
@@ -60,13 +60,21 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $QtDir = "${{ steps.qt.outputs.qt_install_dir }}"
-          Write-Host "QtDir = $QtDir"
+          # Find qmake installed by install-qt-action
+          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
+          Write-Host "qmake: $Qmake"
 
+          # Query Qt installation directory
+          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
+          Write-Host "✅ QtDir = $QtDir"
+
+          # Get windeployqt.exe path
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
-          Write-Host "Using windeployqt.exe at: $Windeploy"
+          Write-Host "Using windeployqt.exe: $Windeploy"
 
+          # Run deployment
           & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime
+
 
 
 
