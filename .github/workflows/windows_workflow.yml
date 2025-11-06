@@ -60,7 +60,8 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $Qmake = Get-Command qmake | Select-ExpandProperty Source
+         $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
+
           Write-Host "qmake path: $Qmake"
 
           $QtDir = & $Qmake -query QT_INSTALL_PREFIX
