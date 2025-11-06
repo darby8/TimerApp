@@ -44,7 +44,8 @@ jobs:
 
 
       - name: Configure CMake
-        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+
         
         
       - name: Install MSVC Redistributable
@@ -55,16 +56,20 @@ jobs:
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
         
         
-      - name: Verify and copy uiohook & minhook
-        shell: pwsh
-        run: |
-          $HOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\Release" -Filter "uiohook.dll" -Recurse | Select-Object -First 1
-          $MINHOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\Release" -Filter "minhook*.dll" -Recurse | Select-Object -First 1
+     - name: Copy libuiohook runtime DLLs
+       shell: pwsh
+       run: |
+         $HOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "uiohook.dll" | Select-Object -First 1
+         $MINHOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "minhook*.dll" | Select-Object -First 1
 
-          if (-not $HOOK_DLL) { Write-Error "❌ uiohook.dll missing in Release folder (likely built Debug or x86)" }
-          if (-not $MINHOOK_DLL) { Write-Error "❌ minhook missing in Release folder" }
+         if (-not $HOOK_DLL) { Write-Error "❌ libuiohook did not build in Release mode" }
+         if (-not $MINHOOK_DLL) { Write-Error "❌ minhook.dll missing (it is required)" }
 
-          Write-Host "✅ libuiohook + minhook OK"
+         Copy-Item $HOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
+         Copy-Item $MINHOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
+
+         Write-Host "✅ Copied uiohook + minhook DLLs into Release folder"
+
 
 
 
