@@ -51,6 +51,24 @@ jobs:
 
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
+        
+      - name: Build libuiohook
+        shell: pwsh
+        run: |
+          cd vendor/libuiohook
+          mkdir build
+          cd build
+          cmake -G "Visual Studio 17 2022" -A x64 -D BUILD_SHARED_LIBS=ON -D BUILD_DEMO=OFF -DCMAKE_INSTALL_PREFIX=install ..
+          cmake --build . --config Release --target install
+
+      - name: Copy uiohook.dll
+        shell: pwsh
+        run: |
+          Copy-Item -Path "vendor/libuiohook/build/install/bin/uiohook.dll" -Destination "${{ env.BUILD_DIR }}\Release" -Force
+
+        
+        
+        
 
       - name: Bundle Qt dependencies
         shell: pwsh
