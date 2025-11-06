@@ -42,6 +42,16 @@ jobs:
       - name: Clean old build folder
         run: |
           if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
+          
+          
+      - name: Build uiohook (Windows DLL)
+        run: |
+          cd vendor/libuiohook
+          mkdir build
+          cd build
+          cmake -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release
+
 
       - name: Configure CMake
         run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
@@ -52,23 +62,10 @@ jobs:
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
         
-      - name: Build libuiohook
-        shell: pwsh
+      - name: Copy uiohook.dll into build output
         run: |
-          cd vendor/libuiohook
-          mkdir build
-          cd build
-          cmake -G "Visual Studio 17 2022" -A x64 -D BUILD_SHARED_LIBS=ON -D BUILD_DEMO=OFF -DCMAKE_INSTALL_PREFIX=install ..
-          cmake --build . --config Release --target install
+          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
 
-      - name: Copy uiohook.dll
-        shell: pwsh
-        run: |
-          Copy-Item -Path "vendor/libuiohook/build/install/bin/uiohook.dll" -Destination "${{ env.BUILD_DIR }}\Release" -Force
-
-        
-        
-        
 
       - name: Bundle Qt dependencies
         shell: pwsh
