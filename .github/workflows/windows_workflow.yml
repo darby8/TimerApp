@@ -51,20 +51,6 @@ jobs:
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
 
-      - name: Copy libuiohook runtime DLLs
-        shell: pwsh
-        run: |
-          $HOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "uiohook.dll" | Select-Object -First 1
-          $MINHOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "minhook*.dll" | Select-Object -First 1
-
-          if (-not $HOOK_DLL) { Write-Error "❌ libuiohook did not build in Release mode" }
-          if (-not $MINHOOK_DLL) { Write-Error "❌ minhook.dll missing (it is required)" }
-
-          Copy-Item $HOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
-          Copy-Item $MINHOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
-
-          Write-Host "✅ Copied uiohook + minhook DLLs into Release folder"
-
       - name: Bundle Qt dependencies
         shell: pwsh
         run: |
@@ -73,8 +59,13 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $QtBin = (Get-ChildItem "C:\Qt" -Directory -Recurse | Where-Object { $_.Name -eq "bin" } | Select-Object -First 1).FullName
-          & "$QtBin\windeployqt.exe" "$($EXE.FullName)" --release --qmldir .
+          $QtDir = "${{ steps.qt.outputs.qt_dir }}"
+          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
+
+          & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime
+
+
+
 
       - name: List deployed app files (debug info)
         run: dir install /s
