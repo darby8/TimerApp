@@ -13,15 +13,12 @@ jobs:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
       QT_VERSION: 6.8.3   # ensure matching installed version
-      QT_MODULES: qtcharts qtshadertools
+      QT_MODULES: qtmultimedia
       GENERATOR: "Visual Studio 17 2022"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
 
       - name: Install dependencies (Ninja + NSIS)
         run: |
@@ -38,27 +35,10 @@ jobs:
           modules: ${{ env.QT_MODULES }}
           cache: true
 
-
-            # ✅ Build libuiohook first
-      - name: Build libuiohook
-        shell: pwsh
-        run: |
-          cd vendor/libuiohook
-          cmake -B build -G "${{ env.GENERATOR }}" -A x64 -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      # ✅ Configure main project and pass libuiohook paths
       - name: Configure CMake
-        shell: pwsh
-        run: |
-          cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S ${{ github.workspace }} -A x64 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DUiOHOOK_LIB="${{ github.workspace }}\vendor\libuiohook\build\Release\uiohook.lib" `
-            -DUiOHOOK_INCLUDE="${{ github.workspace }}\vendor\libuiohook\include"
+        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
 
-      # ✅ Build main project
       - name: Build (Release)
-        shell: pwsh
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
 
       # ✅ Find the actual .exe created by the build and deploy Qt libs
@@ -69,8 +49,9 @@ jobs:
           if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
-          windeployqt.exe --release --qmldir . "$($EXE.FullName)"
 
+          # Direct call, avoids variable path issues
+          windeployqt.exe --release --qmldir . "$($EXE.FullName)"
 
       - name: Prepare installer folder
         shell: pwsh
@@ -99,4 +80,5 @@ jobs:
         with:
           name: Windows-Installer
           path: "*.exe"
+
 
