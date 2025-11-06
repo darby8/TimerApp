@@ -60,7 +60,7 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-         $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
+          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
 
           Write-Host "qmake path: $Qmake"
 
