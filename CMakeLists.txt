@@ -14,6 +14,11 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
 # )
 # libuiohook
+
+
+set(UIOHOOK_ENABLE_BACKEND_WIN32 ON CACHE BOOL "Enable Win32 backend" FORCE)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libuiohook" FORCE)
+
 add_subdirectory(vendor/libuiohook)
 set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleApplication")
 add_subdirectory(singleapplication)
@@ -94,7 +99,7 @@ target_include_directories(appproject-overwatch
 )
 
 target_link_libraries(appproject-overwatch
-    PRIVATE  SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
+    PRIVATE  uiohook SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network
 )
 
 include(GNUInstallDirs)

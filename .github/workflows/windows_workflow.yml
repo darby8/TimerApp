@@ -12,7 +12,7 @@ jobs:
     env:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
-      QT_VERSION: 6.8.3   # ensure matching installed version
+      QT_VERSION: 6.8.3
       QT_MODULES: qtmultimedia qtcharts qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
@@ -37,46 +37,34 @@ jobs:
           arch: win64_msvc2022_64
           modules: ${{ env.QT_MODULES }}
           cache: true
-          
+
       - name: Clean old build folder
         run: |
           if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
 
-
       - name: Configure CMake
         run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
 
-        
-        
       - name: Install MSVC Redistributable
         run: choco install vcredist140 -y
 
-
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
-        
-        
-     - name: Copy libuiohook runtime DLLs
-       shell: pwsh
-       run: |
-         $HOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "uiohook.dll" | Select-Object -First 1
-         $MINHOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "minhook*.dll" | Select-Object -First 1
 
-         if (-not $HOOK_DLL) { Write-Error "❌ libuiohook did not build in Release mode" }
-         if (-not $MINHOOK_DLL) { Write-Error "❌ minhook.dll missing (it is required)" }
+      - name: Copy libuiohook runtime DLLs
+        shell: pwsh
+        run: |
+          $HOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "uiohook.dll" | Select-Object -First 1
+          $MINHOOK_DLL = Get-ChildItem "${{ env.BUILD_DIR }}\vendor\libuiohook" -Recurse -Filter "minhook*.dll" | Select-Object -First 1
 
-         Copy-Item $HOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
-         Copy-Item $MINHOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
+          if (-not $HOOK_DLL) { Write-Error "❌ libuiohook did not build in Release mode" }
+          if (-not $MINHOOK_DLL) { Write-Error "❌ minhook.dll missing (it is required)" }
 
-         Write-Host "✅ Copied uiohook + minhook DLLs into Release folder"
+          Copy-Item $HOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
+          Copy-Item $MINHOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
 
+          Write-Host "✅ Copied uiohook + minhook DLLs into Release folder"
 
-
-
-        
-        
-
-      # ✅ Find the actual .exe created by the build and deploy Qt libs
       - name: Bundle Qt dependencies
         shell: pwsh
         run: |
@@ -85,13 +73,8 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          # Direct call, avoids variable path issues
           $QtBin = (Get-ChildItem "C:\Qt" -Directory -Recurse | Where-Object { $_.Name -eq "bin" } | Select-Object -First 1).FullName
           & "$QtBin\windeployqt.exe" "$($EXE.FullName)" --release --qmldir .
-
-
-
-
 
       - name: List deployed app files (debug info)
         run: dir install /s
@@ -102,26 +85,20 @@ jobs:
           New-Item -ItemType Directory -Force -Path install | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
 
-
-
-      # ✅ Prepare installer payload folder
       - name: Create installer source folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
 
-      # ✅ Build the NSIS Installer
       - name: Build installer
         shell: pwsh
         run: |
           & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
 
-      # ✅ Upload installer artifact
-      - name: Upload installer
+      - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Installer
           path: "*.exe"
-
 
