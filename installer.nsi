@@ -4,7 +4,7 @@
 !define VERSION "1.0.0"
 !define INSTALL_DIR "$PROGRAMFILES64\${COMPANY}\${APPNAME}"
 
-OutFile "${APPNAME}_Setup_${VERSION}.exe"
+OutFile "${APPNAME}.exe"
 InstallDir "${INSTALL_DIR}"
 RequestExecutionLevel admin
 
