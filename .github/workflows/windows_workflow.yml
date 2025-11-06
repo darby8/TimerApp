@@ -43,6 +43,24 @@ jobs:
 
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
+        
+        
+      - name: Copy libuiohook runtime DLLs
+        shell: pwsh
+        run: |
+          $HOOK_DLL = Get-ChildItem vendor/libuiohook -Recurse -Filter "uiohook.dll" | Select-Object -First 1
+          $MINHOOK_DLL = Get-ChildItem vendor/libuiohook -Recurse -Filter "minhook*.dll" | Select-Object -First 1
+
+          if (-not $HOOK_DLL) { Write-Error "❌ uiohook.dll not found" }
+          if (-not $MINHOOK_DLL) { Write-Error "❌ minhook dll not found" }
+
+          Copy-Item $HOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
+          Copy-Item $MINHOOK_DLL.FullName "${{ env.BUILD_DIR }}\Release" -Force
+
+          Write-Host "✅ Copied uiohook + minhook DLLs"
+
+        
+        
 
       # ✅ Find the actual .exe created by the build and deploy Qt libs
       - name: Bundle Qt dependencies
