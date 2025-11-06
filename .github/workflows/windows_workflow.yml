@@ -55,26 +55,17 @@ jobs:
       - name: Bundle Qt dependencies
         shell: pwsh
         run: |
-          $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
-
-          Write-Host "✅ Found executable: $($EXE.FullName)"
-
-          # Find qmake installed by install-qt-action
-          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
-          Write-Host "qmake: $Qmake"
-
-          # Query Qt installation directory
-          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
-          Write-Host "✅ QtDir = $QtDir"
-
-          # Get windeployqt.exe path
-          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
-          Write-Host "Using windeployqt.exe: $Windeploy"
-
-          # Run deployment
+          # … your existing code …
           & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime
 
+          # **Add uiohook.dll copy** (assuming it’s in your build output)
+          $UIOPath = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter uiohook.dll -Recurse | Select-Object -First 1
+          if ($UIOPath) {
+            Write-Host "✅ Found uiohook.dll: $($UIOPath.FullName)"
+            Copy-Item -Path $UIOPath.FullName -Destination "${{ env.BUILD_DIR }}\Release" -Force
+          } else {
+            Write-Host "⚠️ uiohook.dll not found in Release folder — if your app uses it, deployment will fail."
+          }
 
       - name: Prepare installer folder
         shell: pwsh
