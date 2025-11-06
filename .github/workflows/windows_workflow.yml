@@ -59,10 +59,14 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $QtDir = "${{ steps.qt.outputs.qt_dir }}"
-          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
+          $QtDir = "${{ steps.qt.outputs.qt_install_dir }}"
+          Write-Host "QtDir = $QtDir"
 
-          & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime
+          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
+          Write-Host "Using windeployqt.exe at: $Windeploy"
+
+          & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime --no-translations
+
 
 
 
