@@ -76,19 +76,17 @@ jobs:
           & $Windeploy "$($EXE.FullName)" --release --qmldir . --compiler-runtime
 
 
-
-
-
-
-
-      - name: List deployed app files (debug info)
-        run: dir install /s
-
       - name: Prepare installer folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path install | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
+          
+      - name: List deployed app files (debug info)
+        shell: pwsh
+        run: |
+          Write-Host "Listing install folder contents:"
+          Get-ChildItem -Path install -Recurse | Format-Table
 
       - name: Create installer source folder
         shell: pwsh
