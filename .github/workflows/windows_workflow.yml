@@ -13,7 +13,7 @@ jobs:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
       QT_VERSION: 6.8.3   # ensure matching installed version
-      QT_MODULES: qtmultimedia
+      QT_MODULES: qtmultimedia qtcharts qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
     steps:
