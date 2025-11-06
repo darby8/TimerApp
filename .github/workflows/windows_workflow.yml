@@ -29,7 +29,7 @@ jobs:
           choco install nsis -y
 
       - name: Set up Qt
-       id: qt
+        id: qt
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
