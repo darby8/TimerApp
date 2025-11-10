@@ -100,6 +100,7 @@ jobs:
 
           Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
           Copy-Item "$QML_SOURCE" "$QML_DEST" -Recurse -Force
+          
       - name: Prepare installer folder
         shell: pwsh
         run: |
@@ -122,10 +123,14 @@ jobs:
 
 
         
+      - name: Install NSIS
+        run: choco install nsis -y
+
       - name: Build installer
         shell: pwsh
         run: |
-            & "C:/Program Files (x86)/NSIS/makensis.exe" /V2 installer.nsi
+          makensis.exe /V2 installer.nsi
+
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
