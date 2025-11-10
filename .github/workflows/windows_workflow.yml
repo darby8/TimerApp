@@ -92,6 +92,14 @@ jobs:
 
 
 
+      - name: Copy project QML files
+        shell: pwsh
+        run: |
+          $QML_SOURCE = Join-Path $PWD "QML"
+          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release" "QML"
+
+          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
+          Copy-Item "$QML_SOURCE" "$QML_DEST" -Recurse -Force
       - name: Prepare installer folder
         shell: pwsh
         run: |
