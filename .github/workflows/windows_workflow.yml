@@ -71,30 +71,38 @@ jobs:
         shell: pwsh
         run: |
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!"; exit 1 }
-
-          Write-Host "✅ Found executable: $($EXE.FullName)"
-
-          # locate qmake provided by install-qt-action
-          $Qmake = (Get-ChildItem -Recurse "$env:Qt6_DIR" -Filter qmake.exe | Select-Object -First 1).FullName
-          Write-Host "qmake path: $Qmake"
-
-          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
-          Write-Host "QtDir = $QtDir"
-
-          # search for windeployqt (reliable)
-          $Windeploy = (Get-ChildItem -Recurse $QtDir -Filter windeployqt.exe | Select-Object -First 1).FullName
-          if (-not $Windeploy) {
-            Write-Error "❌ Could not locate windeployqt.exe under $QtDir"
+          if (-not $EXE) {
+            Write-Error "❌ No .exe found in build/Release!"
             exit 1
           }
-          Write-Host "✅ windeployqt path: $Windeploy"
+          Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          # full QML path (no relative path problems)
+          # Find qmake under the Qt installation folder installed by install-qt-action
+          $Qmake = (Get-ChildItem -Recurse "$env:Qt6_DIR" -Filter qmake.exe | Select-Object -First 1).FullName
+          if (-not $Qmake) {
+            Write-Error "❌ qmake.exe not found under $env:Qt6_DIR"
+            exit 1
+          }
+          Write-Host "✅ qmake found at: $Qmake"
+
+          # Get Qt install prefix
+          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
+          Write-Host "✅ QtDir = $QtDir"
+
+          # Find windeployqt.exe reliably
+          $Windeploy = (Get-ChildItem -Recurse $QtDir -Filter windeployqt.exe | Select-Object -First 1).FullName
+          if (-not $Windeploy) {
+            Write-Error "❌ windeployqt.exe not found under $QtDir"
+            exit 1
+          }
+          Write-Host "✅ windeployqt located at: $Windeploy"
+
+          # Full QML path (your real QML folder in root)
           $QmlDir = Join-Path $PSScriptRoot "QML"
-          Write-Host "Using QML directory: $QmlDir"
+          Write-Host "✅ QML directory = $QmlDir"
 
           & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QmlDir" --compiler-runtime
+
 
 
 
