@@ -77,27 +77,31 @@ jobs:
           }
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          # Find qmake under the Qt installation folder installed by install-qt-action
-          $Qmake = (Get-ChildItem -Recurse "$env:Qt6_DIR" -Filter qmake.exe | Select-Object -First 1).FullName
-          if (-not $Qmake) {
-            Write-Error "❌ qmake.exe not found under $env:Qt6_DIR"
+          # The REAL Qt installation path from install-qt-action
+          $QtRoot = "${{ steps.qt.outputs.qt_dir }}"
+          Write-Host "✅ Qt installed at: $QtRoot"
+
+          # qmake location
+          $Qmake = Join-Path $QtRoot "bin\qmake.exe"
+          if (-not (Test-Path $Qmake)) {
+            Write-Error "❌ qmake.exe not found at $Qmake"
             exit 1
           }
           Write-Host "✅ qmake found at: $Qmake"
 
-          # Get Qt install prefix
+          # Determine actual QtDir
           $QtDir = & $Qmake -query QT_INSTALL_PREFIX
           Write-Host "✅ QtDir = $QtDir"
 
-          # Find windeployqt.exe reliably
-          $Windeploy = (Get-ChildItem -Recurse $QtDir -Filter windeployqt.exe | Select-Object -First 1).FullName
-          if (-not $Windeploy) {
-            Write-Error "❌ windeployqt.exe not found under $QtDir"
+          # windeployqt
+          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
+          if (-not (Test-Path $Windeploy)) {
+            Write-Error "❌ windeployqt.exe not found at $Windeploy"
             exit 1
           }
-          Write-Host "✅ windeployqt located at: $Windeploy"
+          Write-Host "✅ Using windeployqt: $Windeploy"
 
-          # Full QML path (your real QML folder in root)
+          # Your real QML folder in the repo root
           $QmlDir = Join-Path $PSScriptRoot "QML"
           Write-Host "✅ QML directory = $QmlDir"
 
