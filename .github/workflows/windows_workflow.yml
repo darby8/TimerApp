@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
 
     env:
-      QT_VERSION: 6.5.3
+      QT_VERSION: 6.8.3
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
 
