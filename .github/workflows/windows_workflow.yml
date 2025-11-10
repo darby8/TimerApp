@@ -85,8 +85,16 @@ jobs:
           New-Item -ItemType Directory -Force -Path install | Out-Null
           Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
           
-          # Ensure QML works no matter where launched
-          Set-Content install\run.bat "set QML2_IMPORT_PATH=%~dp0qml`nstart appproject-overwatch.exe"
+          $runbat = @"
+@echo off
+set DIR=%~dp0
+set QML2_IMPORT_PATH=%DIR%qml
+cd /d %DIR%
+start "" "%DIR%appproject-overwatch.exe"
+"@
+
+          Set-Content install\run.bat $runbat
+
 
       - name: Upload Portable Build
         uses: actions/upload-artifact@v4
