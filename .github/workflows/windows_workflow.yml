@@ -43,8 +43,7 @@ jobs:
         run: |
           if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
           
-      - name: Print Qt install dir (debug)
-        run: echo "Qt installed to: ${{ steps.qt.outputs.qt_dir }}"
+
 
       - name: Build uiohook (Windows DLL)
         run: |
