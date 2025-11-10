@@ -87,8 +87,9 @@ jobs:
           Write-Host "Using QML Dir = $QML_DIR"
 
           & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QML_DIR" --compiler-runtime
-
-      - name: Copy project QML files (correct structure: no nested QML folder)
+          
+          
+      - name: Copy project QML files 
         shell: pwsh
         run: |
           $QML_SOURCE = Join-Path $PWD "QML"
@@ -103,7 +104,6 @@ jobs:
           Copy-Item "$QML_SOURCE\*" "$QML_DEST" -Recurse -Force
 
 
-          
       - name: Prepare installer folder
         shell: pwsh
         run: |
