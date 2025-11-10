@@ -13,7 +13,7 @@ jobs:
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
       QT_VERSION: 6.8.3
-      QT_MODULES: qtmultimedia qtcharts 
+      QT_MODULES: qtmultimedia qtcharts qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
     steps:
@@ -38,13 +38,12 @@ jobs:
           arch: win64_msvc2022_64
           modules: ${{ env.QT_MODULES }}
           cache: true
-          
+
       - name: Clean old build folder
         run: |
           if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
           
-
-
+          
       - name: Build uiohook (Windows DLL)
         run: |
           cd vendor/libuiohook
@@ -74,23 +73,23 @@ jobs:
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
           if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!"; exit 1 }
 
-          $QtRoot = "${{ steps.qt.outputs.qt_dir }}"
-          if (-not $QtRoot) { Write-Error "❌ Qt did not install!"; exit 1 }
-          Write-Host "✅ Qt root = $QtRoot"
+          Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $Windeploy = Join-Path $QtRoot "bin\windeployqt.exe"
-          if (-not (Test-Path $Windeploy)) { 
-            Write-Error "❌ windeployqt.exe not found! Path checked: $Windeploy"
+          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
+
+          Write-Host "qmake path: $Qmake"
+
+          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
+          Write-Host "QtDir = $QtDir"
+
+          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
+          Write-Host "windeployqt path: $Windeploy"
+
+          if (-not (Test-Path $Windeploy)) {
+            Write-Error "❌ windeployqt.exe not found at path: $Windeploy"
             exit 1
           }
-
-          $QmlDir = Join-Path $PSScriptRoot "QML"
-          Write-Host "✅ Using QML dir: $QmlDir"
-
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QmlDir" --compiler-runtime
-
-
-
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime
 
 
       - name: Prepare installer folder
@@ -110,6 +109,10 @@ jobs:
         run: |
           New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
+
+
+
+
         
       - name: Build installer
         shell: pwsh
