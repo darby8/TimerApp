@@ -85,15 +85,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path install | Out-Null
           Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
           
+          $EXE = Get-ChildItem install -Filter *.exe | Select-Object -First 1
+          if (-not $EXE) { Write-Error "❌ No .exe found in install folder!" }
+
           $runbat = @"
           @echo off
           set DIR=%~dp0
           set QML2_IMPORT_PATH=%DIR%qml
           cd /d %DIR%
-          start "" "%DIR%appproject-overwatch.exe"
+          start "" "%DIR%$($EXE.Name)"
           "@
 
           Set-Content install\run.bat $runbat
+
 
 
       - name: Upload Portable Build
