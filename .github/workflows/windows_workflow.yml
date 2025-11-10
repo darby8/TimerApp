@@ -113,24 +113,12 @@ jobs:
           Write-Host "Listing install folder contents:"
           Get-ChildItem -Path install -Recurse | Format-Table
 
-      - name: Create installer source folder
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
-          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
-
-
-
 
         
-      - name: Install NSIS
-        run: choco install nsis -y
-
       - name: Build installer
         shell: pwsh
         run: |
-          makensis.exe /V2 installer.nsi
-
+            & "C:/Program Files (x86)/NSIS/makensis.exe" /V2 installer.nsi
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
