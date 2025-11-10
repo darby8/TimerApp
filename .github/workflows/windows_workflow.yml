@@ -12,7 +12,7 @@ jobs:
     env:
       BUILD_DIR: build
       QT_VERSION: 6.8.3
-      QT_MODULES: qtmultimedia qtcharts qtshadertools
+      QT_MODULES: qtdeclarative qtquickcontrols2 qtcharts qtmultimedia qtsvg qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
     steps:
@@ -49,6 +49,7 @@ jobs:
           cmake -G "${{ env.GENERATOR }}" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release
 
+
       - name: Configure CMake
         run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
 
@@ -59,34 +60,33 @@ jobs:
         run: |
           Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\ -Force
 
-      # ✅ Correct windeployqt call for Qt6 + QML Module apps
       - name: Bundle Qt dependencies
         shell: pwsh
         run: |
-          $EXE = Get-ChildItem "${{ env.BUILD_DIR }}\Release" -Filter appproject-overwatch.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ appproject-overwatch.exe not found!"; exit 1 }
+          $env:QML2_IMPORT_PATH = "QML"
+          $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
+          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
 
-          Write-Host "✅ Found executable: $($EXE.FullName)"
+          windeployqt.exe --release --qmldir QML "$($EXE.FullName)"
 
-          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
-          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
-          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
 
-          $QML_MODULE_DIR = "${{ env.BUILD_DIR }}\project-overwatch"
 
-          & "$Windeploy" "$($EXE.FullName)" `
-            --release `
-            --qmldir "$QML_MODULE_DIR" `
-            --compiler-runtime
+      - name: Copy Project QML Folder (Fix local imports)
+        shell: pwsh
+        run: |
+          $QML_DEST = "${{ env.BUILD_DIR }}\Release\qml"
+          New-Item -ItemType Directory -Force -Path $QML_DEST | Out-Null
+          Copy-Item "QML\*" $QML_DEST -Recurse -Force
 
-      # ✅ Create portable build folder
       - name: Create Portable Output
         shell: pwsh
         run: |
           if (Test-Path install) { Remove-Item -Recurse -Force install }
           New-Item -ItemType Directory -Force -Path install | Out-Null
-
           Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
+          
+          # Ensure QML works no matter where launched
+          Set-Content install\run.bat "set QML2_IMPORT_PATH=%~dp0qml`nstart appproject-overwatch.exe"
 
       - name: Upload Portable Build
         uses: actions/upload-artifact@v4
