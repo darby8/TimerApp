@@ -67,7 +67,7 @@ jobs:
           Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
 
 
-            - name: Bundle Qt dependencies
+      - name: Bundle Qt dependencies
         shell: pwsh
         run: |
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
