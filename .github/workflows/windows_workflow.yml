@@ -92,7 +92,8 @@ jobs:
         shell: pwsh
         run: |
           $QML_SOURCE = Join-Path $PWD "QML"
-          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release\qml"
+          $QML_DEST = Join-Path $env:BUILD_DIR "Release\qml"
+
 
           Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
           
