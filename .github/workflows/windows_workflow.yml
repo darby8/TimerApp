@@ -75,21 +75,27 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
-
+          # locate qmake provided by install-qt-action
+          $Qmake = (Get-ChildItem -Recurse "$env:Qt6_DIR" -Filter qmake.exe | Select-Object -First 1).FullName
           Write-Host "qmake path: $Qmake"
 
           $QtDir = & $Qmake -query QT_INSTALL_PREFIX
           Write-Host "QtDir = $QtDir"
 
-          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
-          Write-Host "windeployqt path: $Windeploy"
-
-          if (-not (Test-Path $Windeploy)) {
-            Write-Error "❌ windeployqt.exe not found at path: $Windeploy"
+          # search for windeployqt (reliable)
+          $Windeploy = (Get-ChildItem -Recurse $QtDir -Filter windeployqt.exe | Select-Object -First 1).FullName
+          if (-not $Windeploy) {
+            Write-Error "❌ Could not locate windeployqt.exe under $QtDir"
             exit 1
           }
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime
+          Write-Host "✅ windeployqt path: $Windeploy"
+
+          # full QML path (no relative path problems)
+          $QmlDir = Join-Path $PSScriptRoot "QML"
+          Write-Host "Using QML directory: $QmlDir"
+
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QmlDir" --compiler-runtime
+
 
 
       - name: Prepare installer folder
