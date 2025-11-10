@@ -1,4 +1,4 @@
-name: Windows Qt Build & Installer
+name: Build Qt App (Windows)
 
 on:
   push:
@@ -10,62 +10,87 @@ jobs:
     runs-on: windows-latest
 
     env:
-      QT_VERSION: 6.8.3
       BUILD_DIR: build
-      INSTALLER_SRC: installer/input
+      QT_VERSION: 6.8.3
+      QT_MODULES: qtmultimedia qtcharts qtshadertools
+      GENERATOR: "Visual Studio 17 2022"
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
-      - name: Install aqt & Qt
-        shell: pwsh
+      - name: Install Dependencies
         run: |
-          pip install aqtinstall
-          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2019_64 --outputdir $env:USERPROFILE\Qt --modules qtcharts qtquickcontrols2 qtmultimedia
+          choco install ninja -y
+          choco install vcredist140 -y
+
+      - name: Set up Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Clean old build
+        run: |
+          if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
+
+      - name: Build uiohook (Windows DLL)
+        run: |
+          cd vendor/libuiohook
+          mkdir build
+          cd build
+          cmake -G "${{ env.GENERATOR }}" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release
 
       - name: Configure CMake
+        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (Release)
+        run: cmake --build ${{ env.BUILD_DIR }} --config Release
+
+      - name: Copy uiohook.dll to output
+        run: |
+          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\ -Force
+
+      # ✅ Correct windeployqt call for Qt6 + QML Module apps
+      - name: Bundle Qt dependencies
         shell: pwsh
         run: |
-          cmake -S . -B $env:BUILD_DIR -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="$env:USERPROFILE\Qt\${env:QT_VERSION}\msvc2019_64"
+          $EXE = Get-ChildItem "${{ env.BUILD_DIR }}\Release" -Filter appproject-overwatch.exe -Recurse | Select-Object -First 1
+          if (-not $EXE) { Write-Error "❌ appproject-overwatch.exe not found!"; exit 1 }
 
-      - name: Build
-        shell: pwsh
-        run: cmake --build $env:BUILD_DIR --config Release
+          Write-Host "✅ Found executable: $($EXE.FullName)"
 
-      - name: Deploy Qt Runtime
-        shell: pwsh
-        run: |
-          $EXE = Get-ChildItem "$env:BUILD_DIR\Release" -Filter "appproject-overwatch.exe" -Recurse | Select-Object -First 1
-          $qtbin = "$env:USERPROFILE\Qt\${env:QT_VERSION}\msvc2019_64\bin"
+          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
+          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
+          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
 
-          & "$qtbin\windeployqt.exe" "$($EXE.FullName)" `
+          $QML_MODULE_DIR = "${{ env.BUILD_DIR }}\project-overwatch"
+
+          & "$Windeploy" "$($EXE.FullName)" `
             --release `
-            --qmldir "$env:BUILD_DIR\project-overwatch" `
+            --qmldir "$QML_MODULE_DIR" `
             --compiler-runtime
 
-      - name: Copy files to installer directory
+      # ✅ Create portable build folder
+      - name: Create Portable Output
         shell: pwsh
         run: |
-          rm -Recurse -Force $env:INSTALLER_SRC -ErrorAction Ignore
-          mkdir $env:INSTALLER_SRC
-          Copy-Item "$env:BUILD_DIR\Release\*" $env:INSTALLER_SRC -Recurse -Force
+          if (Test-Path install) { Remove-Item -Recurse -Force install }
+          New-Item -ItemType Directory -Force -Path install | Out-Null
 
-      - name: Install NSIS
-        uses: crazy-max/ghaction-chocolatey@v2
-        with:
-          args: install nsis
+          Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
 
-      - name: Build Installer
-        shell: pwsh
-        run: |
-          makensis.exe installer.nsi
-
-      - name: Upload Installer
+      - name: Upload Portable Build
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-Installer
-          path: "*.exe"
+          name: Windows-Portable-Build
+          path: install
 
