@@ -14,11 +14,6 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
 #     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
 # )
 # libuiohook
-
-
-set(UIOHOOK_ENABLE_BACKEND_WIN32 ON CACHE BOOL "Enable Win32 backend" FORCE)
-set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libuiohook" FORCE)
-
 add_subdirectory(vendor/libuiohook)
 set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleApplication")
 add_subdirectory(singleapplication)
@@ -30,7 +25,7 @@ qt_add_executable(appproject-overwatch
     screenshot.cpp
 )
 
-qt_add_qml_module(appproject-overwatch
+qt_add_qml_module(appproject_overwatch
     URI project-overwatch
     VERSION 1.0
 
@@ -78,12 +73,11 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES QML/pages/Analytics.qml
     RESOURCES QML/pages/GoogleLogin.qml
     RESOURCES QML/pages/AzureLogin.qml
-
     RESOURCES QML/script.js
     RESOURCES QML/Main.qml
     RESOURCES icons/Img.png
-    QML_FILES QML/pages/Theme.qml
-    RESOURCES QML/pages/qmldir
+    RESOURCES QML/pages/Theme.qml
+   
     RESOURCES icons/google.svg
 )
 
@@ -98,8 +92,8 @@ target_include_directories(appproject-overwatch
     PRIVATE vendor/libuiohook/include
 )
 
-target_link_libraries(appproject-overwatch
-    PRIVATE  uiohook SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network
+target_link_libraries(appproject_overwatch
+    PRIVATE  SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
 )
 
 include(GNUInstallDirs)

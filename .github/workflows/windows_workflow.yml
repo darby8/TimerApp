@@ -89,8 +89,8 @@ jobs:
             Write-Error "❌ windeployqt.exe not found at path: $Windeploy"
             exit 1
           }
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime
 
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir . --compiler-runtime
 
       - name: Prepare installer folder
         shell: pwsh

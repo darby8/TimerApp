@@ -1,4 +1,3 @@
-
 !define APPNAME "appproject-overwatch"
 !define COMPANY "Reak"
 !define VERSION "1.0.0"
@@ -14,10 +13,11 @@ Page instfiles
 Section "Install"
   SetOutPath "$INSTDIR"
   File /r "install\*.*"
-  CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\bin\appproject-overwatch.exe"
+  CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 SectionEnd
 
 Section "Uninstall"
   Delete "$DESKTOP\${APPNAME}.lnk"
   RMDir /r "$INSTDIR"
 SectionEnd
+
