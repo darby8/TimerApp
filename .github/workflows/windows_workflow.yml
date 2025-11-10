@@ -88,6 +88,16 @@ jobs:
           Write-Host "Using QML Dir = $QML_DIR"
 
           & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QML_DIR" --compiler-runtime
+          
+      - name: Copy project QML files
+        shell: pwsh
+        run: |
+          $QML_SOURCE = Join-Path $PWD "QML"
+          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release" "QML"
+
+          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
+          Copy-Item "$QML_SOURCE" "$QML_DEST" -Recurse -Force
+
 
 
 
@@ -113,9 +123,14 @@ jobs:
           Get-ChildItem -Path install -Recurse | Format-Table
 
 
-      - name: Upload installer artifact
+
+      - name: Upload portable build
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-Installer
-          path: "*.exe"
+          name: Windows-Portab​le-Build
+          path: install/**
+
+
+
+
 
