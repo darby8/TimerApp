@@ -110,6 +110,11 @@ jobs:
           New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
 
+
+
+      - name: Install NSIS
+        run: choco install nsis -y
+        
       - name: Build installer
         shell: pwsh
         run: |
