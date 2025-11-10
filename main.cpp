@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     // app.setWindowIcon(QIcon("../../icons/pulse.svg"));
 
 
+
     DatabaseHelper dbHelper;
     TimerManager timerManager(&dbHelper);
     timerManager.loadSavedTime();
@@ -35,6 +36,8 @@ int main(int argc, char *argv[])
     // --- Expose objects to QML ---
     QQmlApplicationEngine engine;
 
+    engine.addImportPath("qml");
+    engine.addImportPath(QCoreApplication::applicationDirPath() + "/qml");
     engine.rootContext()->setContextProperty("tracker", &tracker);
     engine.rootContext()->setContextProperty("TimerManager", &timerManager);
     engine.rootContext()->setContextProperty("ScreenshotManager", screenshotManager);

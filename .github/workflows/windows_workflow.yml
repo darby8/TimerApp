@@ -11,7 +11,6 @@ jobs:
 
     env:
       BUILD_DIR: build
-      INSTALLER_SRC: installer/input
       QT_VERSION: 6.8.3
       QT_MODULES: qtmultimedia qtcharts qtshadertools
       GENERATOR: "Visual Studio 17 2022"
@@ -23,12 +22,12 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install dependencies (Ninja + NSIS)
+      - name: Install Dependencies
         run: |
           choco install ninja -y
+          choco install vcredist140 -y
 
       - name: Set up Qt
-        id: qt
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
@@ -38,86 +37,60 @@ jobs:
           modules: ${{ env.QT_MODULES }}
           cache: true
 
-      - name: Clean old build folder
+      - name: Clean old build
         run: |
           if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
-          
-          
+
       - name: Build uiohook (Windows DLL)
         run: |
           cd vendor/libuiohook
           mkdir build
           cd build
-          cmake -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
+          cmake -G "${{ env.GENERATOR }}" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release
 
-
       - name: Configure CMake
-        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
-
-      - name: Install MSVC Redistributable
-        run: choco install vcredist140 -y
+        run: cmake -B ${{ env.BUILD_DIR }} -S . -G "${{ env.GENERATOR }}" -A x64 -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
-        
-      - name: Copy uiohook.dll into build output
-        run: |
-          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
 
+      - name: Copy uiohook.dll to output
+        run: |
+          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\ -Force
 
       - name: Bundle Qt dependencies
         shell: pwsh
         run: |
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!"; exit 1 }
-
-          Write-Host "✅ Found executable: $($EXE.FullName)"
-
-          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
-          Write-Host "qmake path: $Qmake"
-
-          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
-          Write-Host "QtDir = $QtDir"
-
-          $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
-          Write-Host "windeployqt path: $Windeploy"
-
-          $QML_DIR = Join-Path $PWD "QML"
-          Write-Host "Using QML Dir = $QML_DIR"
-
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QML_DIR" --compiler-runtime
+          if (-not $EXE) { Write-Error "❌ No .exe found!"; exit 1 }
+          Write-Host "✅ Found EXE: $($EXE.FullName)"
           
+          $Windeploy = (Get-Command windeployqt.exe).Source
+          Write-Host "Using windeployqt: $Windeploy"
           
-      - name: Copy project QML files 
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir "QML" --compiler-runtime --no-quick-import
+
+      - name: Copy Project QML Folder (Fix local imports)
         shell: pwsh
         run: |
-          $QML_SOURCE = Join-Path $PWD "QML"
-          $QML_DEST = Join-Path $PWD "${{ env.BUILD_DIR }}\Release\qml"
-
-          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
-
-          # Ensure destination exists
+          $QML_DEST = "${{ env.BUILD_DIR }}\Release\qml"
           New-Item -ItemType Directory -Force -Path $QML_DEST | Out-Null
+          Copy-Item "QML\*" $QML_DEST -Recurse -Force
 
-          # Copy CONTENTS, not the folder
-          Copy-Item "$QML_SOURCE\*" "$QML_DEST" -Recurse -Force
-
-
-      - name: Prepare installer folder
+      - name: Create Portable Output
         shell: pwsh
         run: |
+          if (Test-Path install) { Remove-Item -Recurse -Force install }
           New-Item -ItemType Directory -Force -Path install | Out-Null
-          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
+          Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
           
+          # Ensure QML works no matter where launched
+          Set-Content install\run.bat "set QML2_IMPORT_PATH=%~dp0qml`nstart appproject-overwatch.exe"
+
       - name: Upload Portable Build
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Portable-Build
           path: install
-
-
-
-
-
 
