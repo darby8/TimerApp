@@ -88,17 +88,20 @@ jobs:
 
           & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QML_DIR" --compiler-runtime
 
-      - name: Copy project QML files
+      - name: Copy project QML files (correct structure: no nested QML folder)
         shell: pwsh
         run: |
           $QML_SOURCE = Join-Path $PWD "QML"
-          $QML_DEST = Join-Path $env:BUILD_DIR "Release\qml"
-
+          $QML_DEST = Join-Path $PWD "${{ env.BUILD_DIR }}\Release\qml"
 
           Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
-          
-          # Copy CONTENTS of QML folder into qml/ (not the top folder)
+
+          # Ensure destination exists
+          New-Item -ItemType Directory -Force -Path $QML_DEST | Out-Null
+
+          # Copy CONTENTS, not the folder
           Copy-Item "$QML_SOURCE\*" "$QML_DEST" -Recurse -Force
+
 
           
       - name: Prepare installer folder
