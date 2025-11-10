@@ -109,15 +109,6 @@ jobs:
         run: |
           New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
-
-
-
-      - name: Install NSIS (Official Installer Workaround)
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10-setup.exe" -OutFile nsis_setup.exe
-          Start-Process nsis_setup.exe -ArgumentList "/S" -Wait
-
         
       - name: Build installer
         shell: pwsh

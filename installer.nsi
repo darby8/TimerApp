@@ -1,3 +1,4 @@
+
 !define APPNAME "appproject-overwatch"
 !define COMPANY "Reak"
 !define VERSION "1.0.0"
@@ -20,4 +21,3 @@ Section "Uninstall"
   Delete "$DESKTOP\${APPNAME}.lnk"
   RMDir /r "$INSTDIR"
 SectionEnd
-
