@@ -25,7 +25,7 @@ qt_add_executable(appproject-overwatch
     screenshot.cpp
 )
 
-qt_add_qml_module(appproject_overwatch
+qt_add_qml_module(appproject-overwatch
     URI project-overwatch
     VERSION 1.0
 
@@ -77,7 +77,7 @@ qt_add_qml_module(appproject_overwatch
     RESOURCES QML/Main.qml
     RESOURCES icons/Img.png
     RESOURCES QML/pages/Theme.qml
-   
+    RESOURCES QML/pages/qmldir
     RESOURCES icons/google.svg
 )
 
@@ -92,7 +92,7 @@ target_include_directories(appproject-overwatch
     PRIVATE vendor/libuiohook/include
 )
 
-target_link_libraries(appproject_overwatch
+target_link_libraries(appproject-overwatch
     PRIVATE  SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
 )
 

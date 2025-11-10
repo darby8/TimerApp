@@ -58,15 +58,13 @@ jobs:
 
       - name: Install MSVC Redistributable
         run: choco install vcredist140 -y
-        
-      - name: Copy uiohook.dll into build output
-        run: |
-          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
 
       - name: Build (Release)
         run: cmake --build ${{ env.BUILD_DIR }} --config Release
         
-
+      - name: Copy uiohook.dll into build output
+        run: |
+          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
 
 
       - name: Bundle Qt dependencies
