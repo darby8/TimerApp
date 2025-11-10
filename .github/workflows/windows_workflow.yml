@@ -118,7 +118,7 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
+           & "C:/Program Files/NSIS/makensis.exe" /V2 installer.nsi
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
