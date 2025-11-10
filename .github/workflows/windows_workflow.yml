@@ -67,7 +67,7 @@ jobs:
           Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
 
 
-      - name: Bundle Qt dependencies
+            - name: Bundle Qt dependencies
         shell: pwsh
         run: |
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
@@ -75,18 +75,21 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $QtDir = "${{ steps.qt.outputs.qt_dir }}"
+          $QtDir = "${{ steps.qt.outputs.qtPath }}"
+          if (-not $QtDir) { Write-Error "❌ Qt path not returned by install-qt-action!"; exit 1 }
           Write-Host "✅ Qt Dir = $QtDir"
 
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
           if (-not (Test-Path $Windeploy)) {
-            Write-Error "❌ Could not find windeployqt.exe at: $Windeploy"
+            Write-Error "❌ windeployqt.exe not found at: $Windeploy"
             exit 1
           }
-
           Write-Host "✅ Using windeployqt: $Windeploy"
 
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime --no-quick-import
+          $QmlDir = Join-Path $PSScriptRoot "QML"
+          Write-Host "✅ QML Directory: $QmlDir"
+
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QmlDir" --compiler-runtime
 
 
 
