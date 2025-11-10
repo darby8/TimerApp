@@ -83,32 +83,22 @@ jobs:
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
           Write-Host "windeployqt path: $Windeploy"
 
-          # 👉 CHANGE THIS TO YOUR REAL QML FOLDER
           $QML_DIR = Join-Path $PWD "QML"
           Write-Host "Using QML Dir = $QML_DIR"
 
           & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QML_DIR" --compiler-runtime
+
+      - name: Copy project QML files
+        shell: pwsh
+        run: |
+          $QML_SOURCE = Join-Path $PWD "QML"
+          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release\qml"
+
+          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
           
-      - name: Copy project QML files
-        shell: pwsh
-        run: |
-          $QML_SOURCE = Join-Path $PWD "QML"
-          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release" "QML"
+          # Copy CONTENTS of QML folder into qml/ (not the top folder)
+          Copy-Item "$QML_SOURCE\*" "$QML_DEST" -Recurse -Force
 
-          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
-          Copy-Item "$QML_SOURCE" "$QML_DEST" -Recurse -Force
-
-
-
-
-      - name: Copy project QML files
-        shell: pwsh
-        run: |
-          $QML_SOURCE = Join-Path $PWD "QML"
-          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release" "QML"
-
-          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
-          Copy-Item "$QML_SOURCE" "$QML_DEST" -Recurse -Force
           
       - name: Prepare installer folder
         shell: pwsh
@@ -116,14 +106,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path install | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
           
-      - name: List deployed app files (debug info)
-        shell: pwsh
-        run: |
-          Write-Host "Listing install folder contents:"
-          Get-ChildItem -Path install -Recurse | Format-Table
-
-
-
       - name: Upload Portable Build
         uses: actions/upload-artifact@v4
         with:
