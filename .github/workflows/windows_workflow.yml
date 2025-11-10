@@ -75,21 +75,19 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
-
-          Write-Host "qmake path: $Qmake"
-
-          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
-          Write-Host "QtDir = $QtDir"
+          $QtDir = "${{ steps.qt.outputs.qt_dir }}"
+          Write-Host "✅ Qt Dir = $QtDir"
 
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
-          Write-Host "windeployqt path: $Windeploy"
-
           if (-not (Test-Path $Windeploy)) {
-            Write-Error "❌ windeployqt.exe not found at path: $Windeploy"
+            Write-Error "❌ Could not find windeployqt.exe at: $Windeploy"
             exit 1
           }
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime
+
+          Write-Host "✅ Using windeployqt: $Windeploy"
+
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime --no-quick-import
+
 
 
       - name: Prepare installer folder
