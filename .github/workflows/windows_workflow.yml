@@ -86,12 +86,12 @@ jobs:
           Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
           
           $runbat = @"
-@echo off
-set DIR=%~dp0
-set QML2_IMPORT_PATH=%DIR%qml
-cd /d %DIR%
-start "" "%DIR%appproject-overwatch.exe"
-"@
+          @echo off
+          set DIR=%~dp0
+          set QML2_IMPORT_PATH=%DIR%qml
+          cd /d %DIR%
+          start "" "%DIR%appproject-overwatch.exe"
+          "@
 
           Set-Content install\run.bat $runbat
 
