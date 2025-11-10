@@ -10,54 +10,62 @@ jobs:
     runs-on: windows-latest
 
     env:
-      QT_VERSION: 6.8.3
+      QT_VERSION: 6.5.3
       BUILD_DIR: build
       INSTALLER_SRC: installer/input
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install Qt (aqt)
+      - name: Install aqt & Qt
         shell: pwsh
         run: |
           pip install aqtinstall
           aqt install-qt windows desktop $env:QT_VERSION win64_msvc2019_64 --outputdir $env:USERPROFILE\Qt --modules qtcharts qtquickcontrols2 qtmultimedia
 
-      - name: Configure & build
+      - name: Configure CMake
         shell: pwsh
         run: |
-          cmake -S . -B $env:BUILD_DIR -G "Visual Studio 17 2022" -DCMAKE_PREFIX_PATH="$env:USERPROFILE\Qt\${env:QT_VERSION}\msvc2019_64"
-          cmake --build $env:BUILD_DIR --config Release
+          cmake -S . -B $env:BUILD_DIR -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="$env:USERPROFILE\Qt\${env:QT_VERSION}\msvc2019_64"
 
-      - name: Run windeployqt
+      - name: Build
+        shell: pwsh
+        run: cmake --build $env:BUILD_DIR --config Release
+
+      - name: Deploy Qt Runtime
         shell: pwsh
         run: |
+          $EXE = Get-ChildItem "$env:BUILD_DIR\Release" -Filter "appproject-overwatch.exe" -Recurse | Select-Object -First 1
           $qtbin = "$env:USERPROFILE\Qt\${env:QT_VERSION}\msvc2019_64\bin"
-          & "$qtbin\windeployqt.exe" "$env:BUILD_DIR/Release/appproject-overwatch.exe" --qmldir="$PWD"
 
-      - name: Prepare installer files directory
+          & "$qtbin\windeployqt.exe" "$($EXE.FullName)" `
+            --release `
+            --qmldir "$env:BUILD_DIR\project-overwatch" `
+            --compiler-runtime
+
+      - name: Copy files to installer directory
         shell: pwsh
         run: |
           rm -Recurse -Force $env:INSTALLER_SRC -ErrorAction Ignore
           mkdir $env:INSTALLER_SRC
-          Copy-Item "$env:BUILD_DIR/Release/*" $env:INSTALLER_SRC -Recurse
+          Copy-Item "$env:BUILD_DIR\Release\*" $env:INSTALLER_SRC -Recurse -Force
 
       - name: Install NSIS
         uses: crazy-max/ghaction-chocolatey@v2
         with:
           args: install nsis
 
-      - name: Build installer (NSIS)
+      - name: Build Installer
         shell: pwsh
         run: |
           makensis.exe installer.nsi
 
-      - name: Upload Installer Artifact
+      - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: appproject-overwatch-installer
-          path: appproject-overwatch-setup.exe
+          name: Windows-Installer
+          path: "*.exe"
 
