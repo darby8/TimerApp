@@ -112,13 +112,17 @@ jobs:
 
 
 
-      - name: Install NSIS
-        run: choco install nsis -y
+      - name: Install NSIS (Official Installer Workaround)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10-setup.exe" -OutFile nsis_setup.exe
+          Start-Process nsis_setup.exe -ArgumentList "/S" -Wait
+
         
       - name: Build installer
         shell: pwsh
         run: |
-           & "C:/Program Files/NSIS/makensis.exe" /V2 installer.nsi
+            & "C:/Program Files (x86)/NSIS/makensis.exe" /V2 installer.nsi
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
