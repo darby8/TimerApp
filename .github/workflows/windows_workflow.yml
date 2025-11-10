@@ -74,7 +74,7 @@ jobs:
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
           if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!"; exit 1 }
 
-          $QtRoot = "${{ steps.qt.outputs.qt_dir }}"
+          $QtRoot = "${{ steps.qt.outputs.qtRoot }}"
           if (-not $QtRoot) { Write-Error "❌ Qt did not install!"; exit 1 }
           Write-Host "✅ Qt root = $QtRoot"
 
