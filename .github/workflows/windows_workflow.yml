@@ -75,19 +75,24 @@ jobs:
 
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
-          $QtDir = "${{ steps.qt.outputs.qtPath }}"
-          if (-not $QtDir) { Write-Error "❌ Qt path not returned by install-qt-action!"; exit 1 }
-          Write-Host "✅ Qt Dir = $QtDir"
+          # Get qmake path (Qt in PATH because of install-qt-action)
+          $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
+          Write-Host "qmake path: $Qmake"
+
+          # Ask qmake where Qt is actually installed
+          $QtDir = & $Qmake -query QT_INSTALL_PREFIX
+          Write-Host "QtDir = $QtDir"
 
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
+          Write-Host "windeployqt path: $Windeploy"
+
           if (-not (Test-Path $Windeploy)) {
-            Write-Error "❌ windeployqt.exe not found at: $Windeploy"
+            Write-Error "❌ windeployqt.exe not found at path: $Windeploy"
             exit 1
           }
-          Write-Host "✅ Using windeployqt: $Windeploy"
 
           $QmlDir = Join-Path $PSScriptRoot "QML"
-          Write-Host "✅ QML Directory: $QmlDir"
+          Write-Host "QML Dir = $QmlDir"
 
           & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QmlDir" --compiler-runtime
 
