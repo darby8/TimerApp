@@ -12,7 +12,7 @@ jobs:
     env:
       BUILD_DIR: build
       QT_VERSION: 6.8.3
-      QT_MODULES: qtdeclarative qtquickcontrols2 qtcharts qtmultimedia qtsvg qtshadertools
+      QT_MODULES:  qtcharts qtmultimedia  qtshadertools
       GENERATOR: "Visual Studio 17 2022"
 
     steps:
