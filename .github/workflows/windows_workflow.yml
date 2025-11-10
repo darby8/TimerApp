@@ -1,31 +1,79 @@
-      - name: Bundle Qt dependencies
+name: Build Qt App (Windows)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      BUILD_DIR: build
+      QT_VERSION: 6.8.3
+      QT_MODULES: qtmultimedia qtcharts qtshadertools
+      GENERATOR: "Visual Studio 17 2022"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - run: choco install ninja -y
+
+      - name: Set up Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - run: |
+          if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
+
+      - run: |
+          cd vendor/libuiohook
+          mkdir build
+          cd build
+          cmake -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release
+
+      - run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - run: cmake --build ${{ env.BUILD_DIR }} --config Release
+
+      - run: Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\
+
+      - name: Bundle Qt + QML
         shell: pwsh
         run: |
           $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!"; exit 1 }
-
           Write-Host "✅ Found executable: $($EXE.FullName)"
 
           $Qmake = Get-Command qmake | Select-Object -ExpandProperty Source
-          Write-Host "qmake path: $Qmake"
-
           $QtDir = & $Qmake -query QT_INSTALL_PREFIX
-          Write-Host "QtDir = $QtDir"
-
           $Windeploy = Join-Path $QtDir "bin\windeployqt.exe"
-          Write-Host "windeployqt path: $Windeploy"
 
-          $QML_DIR = Join-Path $PWD "QML"
-          Write-Host "Using QML Dir = $QML_DIR"
+          Write-Host "✅ Using QML folder: QML"
 
-          & "$Windeploy" "$($EXE.FullName)" --release --qmldir "$QML_DIR" --compiler-runtime
+          & "$Windeploy" "$($EXE.FullName)" --release --qmldir QML --compiler-runtime
 
-      - name: Copy project QML files
+          Copy-Item QML "${{ env.BUILD_DIR }}\Release\QML" -Recurse -Force
+
+      - name: Prepare portable folder
         shell: pwsh
         run: |
-          $QML_SOURCE = Join-Path $PWD "QML"
-          $QML_DEST = Join-Path "${{ env.BUILD_DIR }}\Release" "QML"
+          New-Item -ItemType Directory -Force -Path install | Out-Null
+          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination install -Recurse -Force
 
-          Write-Host "Copying QML from $QML_SOURCE to $QML_DEST..."
-          Copy-Item "$QML_SOURCE" "$QML_DEST" -Recurse -Force
+      - name: Upload portable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Portab​le-Build
+          path: install/**
 
