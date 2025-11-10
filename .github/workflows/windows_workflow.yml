@@ -26,7 +26,6 @@ jobs:
       - name: Install dependencies (Ninja + NSIS)
         run: |
           choco install ninja -y
-          choco install nsis -y
 
       - name: Set up Qt
         id: qt
