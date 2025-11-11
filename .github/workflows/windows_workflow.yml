@@ -1,108 +1,57 @@
-name: Build Qt App (Windows)
+name: Windows Qt CI/CD
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     env:
-      BUILD_DIR: build
       QT_VERSION: 6.8.3
-      QT_MODULES:  qtcharts qtmultimedia  qtshadertools
-      GENERATOR: "Visual Studio 17 2022"
+      BUILD_DIR: build
+      GENERATOR: "Ninja"
 
     steps:
-      - name: Checkout
+      - name: Checkout repository with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
 
-      - name: Install Dependencies
+      - name: Install Python & aqt
         run: |
-          choco install ninja -y
-          choco install vcredist140 -y
+          python -m pip install --upgrade pip
+          pip install aqtinstall
+          choco install ninja
 
-      - name: Set up Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: windows
-          target: desktop
-          arch: win64_msvc2022_64
-          modules: ${{ env.QT_MODULES }}
-          cache: true
-
-      - name: Clean old build
+      - name: Install Qt 6.8.3 MSVC 2022
         run: |
-          if (Test-Path ${{ env.BUILD_DIR }}) { Remove-Item -Recurse -Force ${{ env.BUILD_DIR }} }
-
-      - name: Build uiohook (Windows DLL)
-        run: |
-          cd vendor/libuiohook
-          mkdir build
-          cd build
-          cmake -G "${{ env.GENERATOR }}" -A x64 -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
-          cmake --build . --config Release
-
+          aqt install-qt windows desktop %QT_VERSION% win64_msvc2022_64 --modules qtbase qtquick qtcharts qtnetwork qtsql qtdeclarative
 
       - name: Configure CMake
-        run: cmake -B ${{ env.BUILD_DIR }} -G "${{ env.GENERATOR }}" -S . -A x64 -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build (Release)
-        run: cmake --build ${{ env.BUILD_DIR }} --config Release
-
-      - name: Copy uiohook.dll to output
         run: |
-          Copy-Item vendor\libuiohook\build\Release\uiohook.dll ${{ env.BUILD_DIR }}\Release\ -Force
+          cmake -S . -B %BUILD_DIR% ^
+            -G "%GENERATOR%" ^
+            -DCMAKE_PREFIX_PATH=%CD%\Qt\%QT_VERSION%\msvc2022_64
 
-      - name: Bundle Qt dependencies
-        shell: pwsh
+      - name: Build project
+        run: cmake --build %BUILD_DIR% --config Release
+
+      - name: Deploy Qt dependencies (windeployqt)
         run: |
-          $env:QML2_IMPORT_PATH = "QML"
-          $EXE = Get-ChildItem -Path "${{ env.BUILD_DIR }}\Release" -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in build/Release!" }
+          "%CD%\Qt\%QT_VERSION%\msvc2022_64\bin\windeployqt.exe" ^
+            --release ^
+            --dir %BUILD_DIR%\Release\deploy ^
+            %BUILD_DIR%\Release\appproject-overwatch.exe
 
-          windeployqt.exe --release --qmldir QML "$($EXE.FullName)"
-
-
-
-      - name: Copy Project QML Folder (Fix local imports)
-        shell: pwsh
+      - name: Zip the deployment folder
         run: |
-          $QML_DEST = "${{ env.BUILD_DIR }}\Release\qml"
-          New-Item -ItemType Directory -Force -Path $QML_DEST | Out-Null
-          Copy-Item "QML\*" $QML_DEST -Recurse -Force
+          powershell Compress-Archive -Path %BUILD_DIR%\Release\deploy\* -DestinationPath %BUILD_DIR%\Release\appproject-overwatch-win.zip
 
-      - name: Create Portable Output
-        shell: pwsh
-        run: |
-          if (Test-Path install) { Remove-Item -Recurse -Force install }
-          New-Item -ItemType Directory -Force -Path install | Out-Null
-          Copy-Item "${{ env.BUILD_DIR }}\Release\*" install -Recurse -Force
-          
-          $EXE = Get-ChildItem install -Filter *.exe | Select-Object -First 1
-          if (-not $EXE) { Write-Error "❌ No .exe found in install folder!" }
-
-          $runbat = @"
-          @echo off
-          set DIR=%~dp0
-          set QML2_IMPORT_PATH=%DIR%qml
-          cd /d %DIR%
-          start "" "%DIR%$($EXE.Name)"
-          "@
-
-          Set-Content install\run.bat $runbat
-
-
-
-      - name: Upload Portable Build
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-Portable-Build
-          path: install
+          name: windows-build
+          path: ${{ env.BUILD_DIR }}/Release/appproject-overwatch-win.zip
 
