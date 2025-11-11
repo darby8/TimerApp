@@ -40,7 +40,10 @@ jobs:
 
 
       - name: Build project
-        run: cmake --build %BUILD_DIR% --config Release
+        shell: pwsh
+        run: |
+           cmake --build $env:BUILD_DIR --config Release
+
 
       - name: Deploy Qt dependencies (windeployqt)
         run: |
