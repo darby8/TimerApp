@@ -82,6 +82,9 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES QML/pages/qmldir
     RESOURCES icons/google.svg
 )
+qt_import_qml_plugins(appproject-overwatch)
+qt_finalize_executable(appproject-overwatch)
+
 
 set_target_properties(appproject-overwatch PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
