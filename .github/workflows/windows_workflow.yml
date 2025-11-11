@@ -58,18 +58,19 @@ jobs:
         shell: pwsh
         run: |
           $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
-          echo "Running windeployqt..."
+          Write-Host "Running windeployqt..."
+
           & "$QtBin\windeployqt.exe" `
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
             --qmldir QML `
-            --webenginecore `      # <<< IMPORTANT FOR WebEngineView
+            --webenginecore `
             --verbose 2
 
-          # WebEngine needs Process & Resources folder copied manually
-          echo "Copying Qt WebEngine Process and Resources..."
-          Copy-Item "$env:CMAKE_PREFIX_PATH\resources" "$env:BUILD_DIR\Release" -Recurse -Force
-          Copy-Item "$env:CMAKE_PREFIX_PATH\bin\QtWebEngineProcess.exe" "$env:BUILD_DIR\Release" -Force
+          Write-Host "Copying Qt WebEngine Resources + Process..."
+          Copy-Item "$env:CMAKE_PREFIX_PATH\resources" "$env:BUILD_DIR\Release" -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item "$env:CMAKE_PREFIX_PATH\bin\QtWebEngineProcess.exe" "$env:BUILD_DIR\Release" -Force -ErrorAction SilentlyContinue
+
 
       - name: Print Output Directory (Debug Info)
         shell: pwsh
