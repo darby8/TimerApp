@@ -31,7 +31,7 @@ jobs:
           $qtBase = "$env:RUNNER_TEMP\Qt"
           aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
             --outputdir $qtBase `
-            --modules qtcharts qtmultimedia qtshadertools qtwebengine qtwebchannel qtpositioning
+            --modules qtcharts qtmultimedia qtshadertools qtwebengine qtwebchannel qtpositioning qtwebview
           
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" | Out-File -Append $env:GITHUB_ENV
 
@@ -58,8 +58,6 @@ jobs:
         shell: pwsh
         run: |
           $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
-          Write-Host "Running windeployqt..."
-
           & "$QtBin\windeployqt.exe" `
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
@@ -67,9 +65,9 @@ jobs:
             --webenginecore `
             --verbose 2
 
-          Write-Host "Copying Qt WebEngine Resources + Process..."
           Copy-Item "$env:CMAKE_PREFIX_PATH\resources" "$env:BUILD_DIR\Release" -Recurse -Force -ErrorAction SilentlyContinue
           Copy-Item "$env:CMAKE_PREFIX_PATH\bin\QtWebEngineProcess.exe" "$env:BUILD_DIR\Release" -Force -ErrorAction SilentlyContinue
+
 
 
 
