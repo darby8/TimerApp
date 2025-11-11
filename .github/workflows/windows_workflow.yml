@@ -31,7 +31,7 @@ jobs:
       - name: Install Qt (MSVC 2022)
         shell: pwsh
         run: |
-          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir "$env:QT_DIR" --modules qtcharts qtmultimedia qtshadertools qtsql
+          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir "$env:QT_DIR" --modules qtbase qtdeclarative qtquickcontrols2 qtmultimedia qtcharts qtsvg qtimageformats
 
       - name: Add Qt to PATH
         shell: pwsh
@@ -57,19 +57,11 @@ jobs:
         shell: pwsh
         run: |
           & "$env:QtBinPath\windeployqt.exe" `
-            "$env:BUILD_DIR\Release\$env:APP_NAME" `
-            --release `
-            --qmldir .
-            
-            
-      - name: Copy Project QML Folder (Fix)
-        shell: pwsh
-        run: |
-          $QML_DEST = "$env:BUILD_DIR\Release\qml"
-          New-Item -ItemType Directory -Force -Path $QML_DEST | Out-Null
-          Copy-Item "QML\*" "$QML_DEST" -Recurse -Force
+          "$env:BUILD_DIR\Release\$env:APP_NAME" `
+          --release `
+          --qmldir "$env:GITHUB_WORKSPACE/QML"
 
-
+            
       - name: Package Artifact
         shell: pwsh
         run: |
