@@ -25,7 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
-      - name: Install Qt (minimal: charts + multimedia + shadertools)
+      - name: Install Qt 
         shell: pwsh
         run: |
           $qtBase = "$env:RUNNER_TEMP\Qt"
