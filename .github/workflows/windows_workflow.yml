@@ -1,4 +1,4 @@
-name: Windows Configure & Build (Quick)
+name: Windows Configure & Build (Quick Debug)
 
 on:
   push:
@@ -19,6 +19,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Show Current Directory
+        shell: pwsh
+        run: |
+          echo "Current Directory:"
+          Get-Location
+          echo "Directory Tree:"
+          Get-ChildItem -Recurse
+
       - name: Install Python + aqt
         shell: cmd
         run: |
@@ -28,24 +36,45 @@ jobs:
       - name: Install Qt 
         shell: pwsh
         run: |
+          echo "--- Installing Qt ---"
           $qtBase = "$env:RUNNER_TEMP\Qt"
+          echo "Qt Base: $qtBase"
           aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir $qtBase --modules qtcharts qtmultimedia qtshadertools
+          echo "Qt Installed at:"
+          Get-ChildItem $qtBase -Recurse | Select-Object FullName
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" >> $env:GITHUB_ENV
+
+      - name: Print CMAKE_PREFIX_PATH
+        shell: pwsh
+        run: |
+          echo "CMAKE_PREFIX_PATH -> $env:CMAKE_PREFIX_PATH"
+          Get-ChildItem "$env:CMAKE_PREFIX_PATH"
 
       - name: Configure CMake
         shell: pwsh
         run: |
+          echo "--- Running CMake Configure ---"
           cmake -S . -B $env:BUILD_DIR -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
+          echo "--- Build Directory Content After Configure ---"
+          Get-ChildItem $env:BUILD_DIR -Recurse
 
       - name: Build (Release)
         shell: pwsh
-        run: cmake --build $env:BUILD_DIR --config Release
+        run: |
+          echo "--- Building Project (Release) ---"
+          cmake --build $env:BUILD_DIR --config Release
+          echo "--- Build Output (Release folder) ---"
+          Get-ChildItem "$env:BUILD_DIR\Release" -Recurse
 
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
+          echo "--- Running windeployqt ---"
           $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
+          echo "Qt Bin Folder: $QtBin"
           & "$QtBin\windeployqt.exe" "$env:BUILD_DIR\Release\$env:APP_NAME" --release --qmldir QML
+          echo "--- After windeployqt Deployment Files: ---"
+          Get-ChildItem "$env:BUILD_DIR\Release" -Recurse
 
       - name: Upload build artifacts (exe + files)
         uses: actions/upload-artifact@v4
