@@ -31,7 +31,8 @@ jobs:
       - name: Install Qt (MSVC 2022)
         shell: pwsh
         run: |
-          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir "$env:QT_DIR" --modules qtbase qtdeclarative qtquickcontrols2 qtmultimedia qtcharts qtsvg qtimageformats
+          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir "$env:QT_DIR" `
+            --modules qtcharts qtmultimedia qtshadertools
 
       - name: Add Qt to PATH
         shell: pwsh
