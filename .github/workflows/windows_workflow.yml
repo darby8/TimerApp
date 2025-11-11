@@ -29,7 +29,7 @@ jobs:
         shell: pwsh
         run: |
           $qtBase = "$env:RUNNER_TEMP\Qt"
-          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir $qtBase --modules qtcharts qtmultimedia qtshadertools
+          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 --outputdir $qtBase --modules qtcharts qtmultimedia qtshadertools qtnetwork
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" >> $env:GITHUB_ENV
 
       - name: Configure CMake
@@ -40,6 +40,13 @@ jobs:
       - name: Build (Release)
         shell: pwsh
         run: cmake --build $env:BUILD_DIR --config Release
+        
+      - name: Deploy Qt (windeployqt)
+       shell: pwsh
+       run: |
+          $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
+          & "$QtBin\windeployqt.exe" "$env:BUILD_DIR\Release\$env:APP_NAME" --release --qmldir QML
+  
 
       - name: Upload build artifacts (exe + files)
         uses: actions/upload-artifact@v4
