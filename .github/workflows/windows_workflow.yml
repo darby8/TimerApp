@@ -31,7 +31,7 @@ jobs:
           $qtBase = "$env:RUNNER_TEMP\Qt"
           aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
             --outputdir $qtBase `
-            --modules qtcharts qtmultimedia qtshadertools qtwebengine qtwebchannel
+            --modules qtcharts qtmultimedia qtshadertools qtwebengine qtwebchannel qtpositioning
           
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" | Out-File -Append $env:GITHUB_ENV
 
