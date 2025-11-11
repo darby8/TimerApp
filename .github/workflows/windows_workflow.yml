@@ -54,23 +54,20 @@ jobs:
         shell: pwsh
         run: cmake --build $env:BUILD_DIR --config Release
 
-      - name: Deploy Qt (including WebEngine)
+      - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
           $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
           & "$QtBin\windeployqt.exe" `
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
-            --qmldir QML `
-            --webenginecore `
+            --qmldir "$env:GITHUB_WORKSPACE\QML" `
             --verbose 2
-
-          Copy-Item "$env:CMAKE_PREFIX_PATH\resources" "$env:BUILD_DIR\Release" -Recurse -Force -ErrorAction SilentlyContinue
-          Copy-Item "$env:CMAKE_PREFIX_PATH\bin\QtWebEngineProcess.exe" "$env:BUILD_DIR\Release" -Force -ErrorAction SilentlyContinue
-
-
-
-
+            
+      - name: Copy QML folder
+        run: |
+           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
+    
       - name: Print Output Directory (Debug Info)
         shell: pwsh
         run: |
