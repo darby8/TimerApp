@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Qt 6.8.3 MSVC 2022
         run: |
-          Run aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 --modules qtbase qtquick qtcharts qtnetwork qtsql qtdeclarative
+          aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 --modules qtbase qtquick qtcharts qtnetwork qtsql qtdeclarative
 
 
       - name: Configure CMake
