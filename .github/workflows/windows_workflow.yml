@@ -4,7 +4,6 @@ name: Windows Qt Build
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -12,7 +11,7 @@ jobs:
 
     env:
       QT_VERSION: 6.8.3
-      QT_DIR: ${{ runner.temp }}\Qt
+      QT_DIR: ${{ runner.temp }}/Qt
       BUILD_DIR: build
       APP_NAME: appproject-overwatch.exe
 
