@@ -5,7 +5,7 @@ project(project-overwatch VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Charts Sql Network)
+find_package(Qt6  REQUIRED COMPONENTS Quick Charts Sql Network)
 
 set(QML_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml")
 set(QML2_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml")
@@ -18,7 +18,7 @@ set(QML2_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml")
 # libuiohook
 add_subdirectory(vendor/libuiohook)
 set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleApplication")
-add_subdirectory(singleapplication)
+# add_subdirectory(singleapplication)
 
 qt_standard_project_setup()
 
@@ -98,9 +98,9 @@ target_include_directories(appproject-overwatch
 )
 
 target_link_libraries(appproject-overwatch
-    PRIVATE  SingleApplication::SingleApplication Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
+    PRIVATE   Qt6::Quick Qt6::Charts Qt6::Sql Qt6::Network uiohook
 )
-
+# SingleApplication::SingleApplication
 include(GNUInstallDirs)
 install(TARGETS appproject-overwatch
     BUNDLE DESTINATION .

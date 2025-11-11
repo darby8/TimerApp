@@ -8,7 +8,7 @@
 #include "TimerManager.h"
 #include "ScreenshotManager.h"
 #include "databasehelper.h"
-#include "singleapplication.h"
+// #include "singleapplication.h"
 #include "tracker.h"
 // Global pointer for ScreenshotManager
 ScreenshotManager* screenshotManager = nullptr;
@@ -18,8 +18,8 @@ Tracker tracker;
 
 int main(int argc, char *argv[])
 {
-    // QApplication app(argc, argv);
-    SingleApplication app(argc, argv);
+    QApplication app(argc, argv);
+    // SingleApplication app(argc, argv);
     app.setApplicationName("Productivity Tracker");
     // app.setWindowIcon(QIcon("../../icons/pulse.svg"));
 
