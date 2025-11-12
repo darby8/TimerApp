@@ -151,6 +151,8 @@ jobs:
             -d $APP_DIR/usr/share/applications/$APP_NAME.desktop \
             --plugin qt \
             --output appimage
+            
+            
 
 
       - name: Upload AppImage Artifact
