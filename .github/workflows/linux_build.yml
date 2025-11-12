@@ -1,0 +1,136 @@
+name: Linux Qt Build (project-overwatch)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+
+    env:
+      QT_VERSION: 6.5.3
+      BUILD_DIR: build
+      APP_NAME: appproject-overwatch
+      APP_DIR: AppDir
+      APPIMAGE_EXTRACT_AND_RUN: 1
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Prepare environment (disable tzdata prompt)
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y tzdata locales
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
+
+      - name: Install base dependencies
+        run: |
+          apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            patchelf \
+            wget \
+            curl \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libegl1-mesa-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libglib2.0-0 libglib2.0-dev \
+            libdbus-1-dev \
+            libfontconfig1-dev \
+            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
+            libxrender1 libxrandr2 libegl1 libglu1-mesa \
+            libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
+            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
+            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev
+
+      - name: Install PostgreSQL + MySQL + ODBC libraries
+        run: |
+          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
+            unixodbc unixodbc-dev odbcinst odbcinst1debian2
+
+      - name: Install Python & aqt
+        run: |
+          apt-get install -y python3 python3-pip
+          pip3 install --upgrade pip
+          pip3 install aqtinstall==3.3.0
+
+      - name: Install Qt 6.5.3
+        run: |
+          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
+            --outputdir Qt \
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
+          echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B $BUILD_DIR -G Ninja \
+            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Project
+        run: cmake --build $BUILD_DIR --config Release --parallel
+
+      - name: Detect built executable
+        id: findexe
+        run: |
+          EXE=$(find $BUILD_DIR -maxdepth 2 -type f -executable -name "$APP_NAME*" | head -n 1)
+          echo "EXE=$EXE" >> $GITHUB_ENV
+          echo "Found executable: $EXE"
+
+      - name: Create AppDir structure
+        run: |
+          mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
+          cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
+          chmod +x $APP_DIR/usr/bin/$APP_NAME
+
+          # Use your actual app icon
+          if [ -f icons/pulse.svg ]; then
+            cp icons/pulse.svg $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+          fi
+
+          cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
+          [Desktop Entry]
+          Name=Project Overwatch
+          Exec=$APP_NAME
+          Icon=$APP_NAME
+          Type=Application
+          Categories=Utility;
+          EOF
+
+      - name: Download linuxdeploy and Qt plugin
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+
+      - name: Download linuxdeployqt
+        run: |
+          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
+          chmod +x linuxdeployqt
+
+      - name: Build AppImage
+        run: |
+          export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
+          ./linuxdeployqt $APP_DIR/usr/share/applications/$APP_NAME.desktop \
+            -bundle-non-qt-libs \
+            -extra-plugins=imageformats/libqsvg.so \
+            -extra-plugins=sqldrivers/libqsqlmysql.so \
+            -appimage
+
+      - name: Upload AppImage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-overwatch-Linux-AppImage
+          path: "*.AppImage"
