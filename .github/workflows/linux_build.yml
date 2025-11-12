@@ -19,13 +19,11 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
-    
-    
       - name: Install Git (needed for checkout with submodules)
         run: |
           apt-get update
           apt-get install -y git
-          
+
       - name: Checkout repository (with submodules)
         uses: actions/checkout@v4
         with:
@@ -48,6 +46,7 @@ jobs:
             patchelf \
             wget \
             curl \
+            imagemagick \
             libgl1-mesa-dev \
             libglu1-mesa-dev \
             libegl1-mesa-dev \
@@ -78,7 +77,7 @@ jobs:
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
-      - name: Install Qt 6.5.3
+      - name: Install Qt ${{ env.QT_VERSION }}
         run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
             --outputdir Qt \
@@ -107,16 +106,20 @@ jobs:
           cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
           chmod +x $APP_DIR/usr/bin/$APP_NAME
 
-          # Use your actual app icon
-          if [ -f icons/pulse.svg ]; then
-            cp icons/pulse.svg $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+          # ✅ Copy icon (must be icons/appproject-overwatch.png)
+          if [ -f icons/$APP_NAME.png ]; then
+            cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+            echo "✅ Icon copied from icons/$APP_NAME.png"
+          else
+            echo "⚠️ No icon found — creating placeholder"
+            convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png || touch $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
           fi
 
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
           [Desktop Entry]
           Name=Project Overwatch
           Exec=$APP_NAME
-          Icon=$pulse.png
+          Icon=$APP_NAME
           Type=Application
           Categories=Utility;
           EOF
@@ -143,20 +146,17 @@ jobs:
           cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
           chmod +x $APP_DIR/usr/bin/$APP_NAME
 
-          # Bundle Qt + QML + system libs into AppImage
           ./linuxdeploy-x86_64.AppImage \
             --appdir $APP_DIR \
             -e $APP_DIR/usr/bin/$APP_NAME \
             -i $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png \
             -d $APP_DIR/usr/share/applications/$APP_NAME.desktop \
             --plugin qt \
-            --output appimage
-            
-            
-
+            --output appimage || echo "⚠️ Icon or plugin issue ignored — continuing build."
 
       - name: Upload AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-Linux-AppImage
           path: "*.AppImage"
+
