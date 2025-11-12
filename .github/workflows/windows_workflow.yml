@@ -15,20 +15,17 @@ jobs:
       INSTALLER_SRC: installer/input
 
     steps:
-      # 🧩 Checkout code + submodules
       - name: Checkout (with submodules)
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # 🧩 Install Python + aqtinstall
       - name: Install Python + aqt
         shell: cmd
         run: |
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
-            # 🧩 Install Qt 6.5.3 with modules
       - name: Install Qt (6.5.3)
         shell: pwsh
         run: |
@@ -38,7 +35,6 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebengine qtwebchannel qtwebview
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" | Out-File -Append $env:GITHUB_ENV
 
-      # 🧩 Configure CMake
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -48,12 +44,10 @@ jobs:
             -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
 
 
-      # 🧩 Build app (Release)
       - name: Build (Release)
         shell: pwsh
         run: cmake --build $env:BUILD_DIR --config Release
 
-      # 🧩 Deploy Qt runtime (windeployqt)
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
@@ -63,13 +57,13 @@ jobs:
             --release `
             --qmldir "$env:GITHUB_WORKSPACE\QML"
 
-      # 🧩 Copy QML folder
+
       - name: Copy QML folder
         shell: pwsh
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
-      # 🧩 Install NSIS via Chocolatey
+
       - name: Install NSIS
         shell: pwsh
         run: |
@@ -77,14 +71,14 @@ jobs:
           $env:PATH += ";C:\Program Files (x86)\NSIS"
           echo "PATH=$env:PATH" | Out-File -Append $env:GITHUB_ENV
 
-      # 🧩 Prepare installer payload folder
+
       - name: Create installer source folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory "${{ env.INSTALLER_SRC }}" -Force | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
 
-      # 🧩 Build the NSIS Installer
+
       - name: Build installer
         shell: pwsh
         run: |
