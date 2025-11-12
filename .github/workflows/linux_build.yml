@@ -101,27 +101,17 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Found executable: $EXE"
 
-      - name: Create AppDir structure (safe icon handling)
+      - name: Create AppDir structure
         run: |
-          mkdir -p $APP_DIR/usr/bin \
-                   $APP_DIR/usr/share/applications \
-                   $APP_DIR/usr/share/icons/hicolor/256x256/apps
-
+          mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
           cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
           chmod +x $APP_DIR/usr/bin/$APP_NAME
 
-          ICON_SRC="icons/appproject-overwatch.png"
-          ICON_DST="$APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png"
-
-          # Check if the icon file exists and is a valid PNG
-          if [ -f "$ICON_SRC" ] && file "$ICON_SRC" | grep -q "PNG image data"; then
-            echo "✅ Valid icon found: $ICON_SRC"
-            cp "$ICON_SRC" "$ICON_DST"
-          else
-            echo "⚠️ Icon missing or invalid. Skipping icon deployment."
+          # Use your actual app icon
+          if [ -f icons/pulse.svg ]; then
+            cp icons/pulse.svg $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
           fi
 
-          # Create .desktop file
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
           [Desktop Entry]
           Name=Project Overwatch
@@ -130,7 +120,6 @@ jobs:
           Type=Application
           Categories=Utility;
           EOF
-
 
       - name: Download linuxdeploy and Qt plugin
         run: |
