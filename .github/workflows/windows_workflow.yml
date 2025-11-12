@@ -3,12 +3,10 @@ name: Windows Configure & Build (Quick)
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
-
     env:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
@@ -26,28 +24,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
-      - name: Install Qt (6.5.3 with modules)
+      - name: Install Qt 6.5.3 (MSVC2019)
         shell: pwsh
         run: |
           $qtBase = "$env:RUNNER_TEMP\Qt"
-          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
+          python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2019_64 `
             --outputdir $qtBase `
-            --modules qtcharts qtmultimedia qtshadertools qtwebengine qtwebchannel qtpositioning qtwebview
-
-          echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" | Out-File -Append $env:GITHUB_ENV
-
-      - name: Show Qt Directory
-        shell: pwsh
-        run: |
-          echo "Qt Installed At:"
-          echo $env:CMAKE_PREFIX_PATH
-          Get-ChildItem $env:CMAKE_PREFIX_PATH
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
+          
+          echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
 
       - name: Configure CMake
         shell: pwsh
         run: |
           cmake -S . -B $env:BUILD_DIR `
-            -G "Visual Studio 17 2022" `
+            -G "Visual Studio 16 2019" `
             -A x64 `
             -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
 
@@ -62,16 +53,12 @@ jobs:
           & "$QtBin\windeployqt.exe" `
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
-            --qmldir "$env:GITHUB_WORKSPACE\QML" `
-            --compiler-runtime `
-            --no-translations `
-            --force
-
+            --qmldir "$env:GITHUB_WORKSPACE\QML"
+            
       - name: Copy QML folder
-        shell: pwsh
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
-
+    
       - name: Upload build artifacts (exe + files)
         uses: actions/upload-artifact@v4
         with:
