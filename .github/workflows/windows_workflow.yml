@@ -82,16 +82,18 @@ jobs:
         shell: cmd
         run: choco install nsis -y
 
-      # ✅ Build NSIS installer
       - name: Build NSIS installer
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 "${{ env.INSTALLER_SCRIPT }}"
+          cd installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
+          cd ..
 
-      # ✅ Upload final installer
+      # ✅ Upload final installer artifact
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Installer
-          path: "*.exe"
+          path: installer\*.exe
+
 
