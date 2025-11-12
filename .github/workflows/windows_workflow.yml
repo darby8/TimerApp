@@ -8,8 +8,9 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+
     env:
-      QT_VERSION: 6.8.3
+      QT_VERSION: 6.5.3
       BUILD_DIR: build
       APP_NAME: appproject-overwatch.exe
 
@@ -25,14 +26,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
-      - name: Install Qt (with WebEngine)
+      - name: Install Qt (6.5.3 with modules)
         shell: pwsh
         run: |
           $qtBase = "$env:RUNNER_TEMP\Qt"
           aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
             --outputdir $qtBase `
             --modules qtcharts qtmultimedia qtshadertools qtwebengine qtwebchannel qtpositioning qtwebview
-          
+
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" | Out-File -Append $env:GITHUB_ENV
 
       - name: Show Qt Directory
@@ -62,17 +63,14 @@ jobs:
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
             --qmldir "$env:GITHUB_WORKSPACE\QML" `
-            --verbose 2
-            
+            --compiler-runtime `
+            --no-translations `
+            --force
+
       - name: Copy QML folder
-        run: |
-           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
-    
-      - name: Print Output Directory (Debug Info)
         shell: pwsh
         run: |
-          echo "Final Release Directory:"
-          Get-ChildItem $env:BUILD_DIR\Release -Recurse
+          xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
       - name: Upload build artifacts (exe + files)
         uses: actions/upload-artifact@v4
