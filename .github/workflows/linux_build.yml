@@ -1,4 +1,4 @@
-name: Linux Qt Build (project-overwatch)
+name: Build Qt App (Linux - AppImage)
 
 on:
   push:
@@ -6,157 +6,96 @@ on:
   workflow_dispatch:
 
 jobs:
-  linux-build:
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:20.04
+  build:
+    runs-on: ubuntu-22.04
 
     env:
-      QT_VERSION: 6.5.3
       BUILD_DIR: build
-      APP_NAME: appproject-overwatch
-      APP_DIR: AppDir
-      APPIMAGE_EXTRACT_AND_RUN: 1
+      QT_VERSION: 6.8.3
+      QT_MODULES: qtdeclarative qtquickcontrols2 qtmultimedia qtcharts qtshadertools
+      GENERATOR: "Ninja"
+      APP_NAME: project-overwatch
 
     steps:
-      - name: Install Git (needed for checkout with submodules)
-        run: |
-          apt-get update
-          apt-get install -y git
-
-      - name: Checkout repository (with submodules)
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Prepare environment (disable tzdata prompt)
+      - name: Install dependencies
         run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update
-          apt-get install -y tzdata locales
-          locale-gen en_US.UTF-8
-          update-locale LANG=en_US.UTF-8
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libxkbcommon-x11-dev libxcb-cursor0 \
+            libx11-xcb-dev libxkbfile-dev libxtst-dev libxinerama-dev \
+            libxcursor-dev libxrandr-dev libxi-dev libxext-dev \
+            libdbus-1-dev ninja-build wget patchelf fuse
 
-      - name: Install base dependencies
+      - name: Install Qt
         run: |
-          apt-get install -y \
-            build-essential \
-            cmake \
-            ninja-build \
-            patchelf \
-            wget \
-            curl \
-            imagemagick \
-            libgl1-mesa-dev \
-            libglu1-mesa-dev \
-            libegl1-mesa-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            libglib2.0-0 libglib2.0-dev \
-            libdbus-1-dev \
-            libfontconfig1-dev \
-            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
-            libxrender1 libxrandr2 libegl1 libglu1-mesa \
-            libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
-            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
-            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
-            libx11-xcb-dev \
-            libxkbfile-dev \
-            libxtst-dev \
-            libxt-dev \
-            libxinerama-dev
+          pip install aqtinstall==3.1.6
+          aqt install-qt linux desktop $QT_VERSION gcc_64 --modules $QT_MODULES --outputdir Qt
 
-      - name: Install PostgreSQL + MySQL + ODBC libraries
+      - name: Configure and Build
         run: |
-          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
-            unixodbc unixodbc-dev odbcinst odbcinst1debian2
+          cmake -B $BUILD_DIR -S . \
+            -DCMAKE_PREFIX_PATH=$PWD/Qt/$QT_VERSION/gcc_64 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -G "$GENERATOR"
+          cmake --build $BUILD_DIR --parallel
 
-      - name: Install Python & aqt
+      - name: Package as AppImage
         run: |
-          apt-get install -y python3 python3-pip
-          pip3 install --upgrade pip
-          pip3 install aqtinstall==3.1.18
+          set -e
+          export VERSION=${{ github.ref_name || 'continuous' }}
+          export APPDIR=$PWD/AppDir
+          export APP_BINARY=$APPDIR/usr/bin/appproject-overwatch
+          export QML_SOURCES_PATHS=$PWD/QML:$PWD/qml:$PWD/src
 
-      - name: Install Qt ${{ env.QT_VERSION }}
-        run: |
-          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
-            --outputdir Qt \
-            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
-          echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
+          echo "🏗️ Preparing AppDir..."
+          mkdir -p $APPDIR/usr/bin
+          mkdir -p $APPDIR/usr/share/applications
+          mkdir -p $APPDIR/usr/share/icons/hicolor/256x256/apps
 
-      - name: Configure CMake
-        run: |
-          cmake -S . -B $BUILD_DIR -G Ninja \
-            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
-            -DCMAKE_BUILD_TYPE=Release
+          cp $BUILD_DIR/appproject-overwatch $APP_BINARY
 
-      - name: Build Project
-        run: cmake --build $BUILD_DIR --config Release --parallel
-
-      - name: Detect built executable
-        id: findexe
-        run: |
-          EXE=$(find $BUILD_DIR -maxdepth 2 -type f -executable -name "$APP_NAME*" | head -n 1)
-          echo "EXE=$EXE" >> $GITHUB_ENV
-          echo "Found executable: $EXE"
-
-      - name: Create AppDir structure
-        run: |
-          mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
-          cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
-          chmod +x $APP_DIR/usr/bin/$APP_NAME
-
-          # ✅ Copy icon (must be icons/appproject-overwatch.png)
-          if [ -f icons/$APP_NAME.png ]; then
-            cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
-            echo "✅ Icon copied from icons/$APP_NAME.png"
+          ICON_SRC=assets/icons/appproject-overwatch.png
+          if [ -f "$ICON_SRC" ]; then
+            cp "$ICON_SRC" $APPDIR/usr/share/icons/hicolor/256x256/apps/
           else
-            echo "⚠️ No icon found — creating placeholder"
-            convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png || touch $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+            echo "⚠️ Icon not found, skipping icon deployment."
           fi
 
-          cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
+          cat > $APPDIR/usr/share/applications/$APP_NAME.desktop <<EOF
           [Desktop Entry]
           Name=Project Overwatch
-          Exec=$APP_NAME
-          Icon=$APP_NAME
+          Exec=appproject-overwatch
+          Icon=appproject-overwatch
           Type=Application
           Categories=Utility;
           EOF
 
-      - name: Download linuxdeploy and Qt plugin
-        run: |
+          echo "📦 Downloading linuxdeploy + plugin..."
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy*.AppImage
 
-      - name: Download linuxdeployqt
-        run: |
-          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
-          chmod +x linuxdeployqt
-
-      - name: Build AppImage (Qt6 compatible)
-        run: |
-          export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
-          export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
-          export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
-          export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
-
-          mkdir -p $APP_DIR/usr/bin
-          cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
-          chmod +x $APP_DIR/usr/bin/$APP_NAME
-
-          ./linuxdeploy-x86_64.AppImage \
-            --appdir $APP_DIR \
-            -e $APP_DIR/usr/bin/$APP_NAME \
-            -i $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png \
-            -d $APP_DIR/usr/share/applications/$APP_NAME.desktop \
+          echo "🚀 Deploying Qt + QML..."
+          ./linuxdeploy-x86_64.AppImage --appdir $APPDIR \
             --plugin qt \
-            --output appimage || echo "⚠️ Icon or plugin issue ignored — continuing build."
+            -e $APP_BINARY \
+            -d $APPDIR/usr/share/applications/$APP_NAME.desktop \
+            -i $APPDIR/usr/share/icons/hicolor/256x256/apps/appproject-overwatch.png
 
-      - name: Upload AppImage Artifact
+          echo "🧱 Building AppImage..."
+          ./linuxdeploy-x86_64.AppImage --appdir $APPDIR --output appimage
+
+          echo "✅ Build complete:"
+          ls -lh *.AppImage
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-Linux-AppImage
+          name: Project_Overwatch_AppImage
           path: "*.AppImage"
 
