@@ -132,14 +132,26 @@ jobs:
           wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
           chmod +x linuxdeployqt
 
-      - name: Build AppImage
+      - name: Build AppImage (Qt6 compatible)
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
-          ./linuxdeployqt $APP_DIR/usr/share/applications/$APP_NAME.desktop \
-            -bundle-non-qt-libs \
-            -extra-plugins=imageformats/libqsvg.so \
-            -extra-plugins=sqldrivers/libqsqlmysql.so \
-            -appimage
+          export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
+          export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
+          export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
+
+          mkdir -p $APP_DIR/usr/bin
+          cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
+          chmod +x $APP_DIR/usr/bin/$APP_NAME
+
+          # Bundle Qt + QML + system libs into AppImage
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir $APP_DIR \
+            -e $APP_DIR/usr/bin/$APP_NAME \
+            -i $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png \
+            -d $APP_DIR/usr/share/applications/$APP_NAME.desktop \
+            --plugin qt \
+            --output appimage
+
 
       - name: Upload AppImage Artifact
         uses: actions/upload-artifact@v4
