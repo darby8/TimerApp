@@ -62,6 +62,7 @@ jobs:
             libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
             libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
             libx11-xcb-dev \
+            libxkbfile-dev \
             libxtst-dev
 
       - name: Install PostgreSQL + MySQL + ODBC libraries
