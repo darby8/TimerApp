@@ -81,6 +81,8 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES QML/pages/Theme.qml
     RESOURCES QML/pages/qmldir
     RESOURCES icons/google.svg
+    RESOURCES icons/pulse.png
+    RESOURCES icons/pulse.png
 )
 qt_import_qml_plugins(appproject-overwatch)
 qt_finalize_executable(appproject-overwatch)
