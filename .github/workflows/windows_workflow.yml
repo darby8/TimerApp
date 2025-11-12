@@ -28,24 +28,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
-      # 🧩 Install Qt 6.5.3 with modules
+            # 🧩 Install Qt 6.5.3 with modules
       - name: Install Qt (6.5.3)
         shell: pwsh
         run: |
           $qtBase = "$env:RUNNER_TEMP\Qt"
-          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2019_64 `
+          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 `
             --outputdir $qtBase `
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebengine qtwebchannel qtwebview
-          echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2022_64" | Out-File -Append $env:GITHUB_ENV
 
       # 🧩 Configure CMake
       - name: Configure CMake
         shell: pwsh
         run: |
           cmake -S . -B $env:BUILD_DIR `
-            -G "Visual Studio 16 2019" `
+            -G "Visual Studio 17 2022" `
             -A x64 `
             -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
+
 
       # 🧩 Build app (Release)
       - name: Build (Release)
