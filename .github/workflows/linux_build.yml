@@ -64,7 +64,8 @@ jobs:
             libx11-xcb-dev \
             libxkbfile-dev \
             libxtst-dev \
-            libxt-dev
+            libxt-dev \
+            libxinerama-dev
 
       - name: Install PostgreSQL + MySQL + ODBC libraries
         run: |
