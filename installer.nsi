@@ -1,28 +1,27 @@
-!define APP_NAME "Project Overwatch"
-!define APP_EXE "appproject-overwatch.exe"
-!define APP_DIR "C:\Program Files\${APP_NAME}"
+!include "MUI2.nsh"
 
-OutFile "project-overwatch-setup.exe"
-InstallDir "${APP_DIR}"
+!define APPNAME "OverwatchApp"
+!define COMPANY "YourCompany"
+!define VERSION "1.0.0"
+!define INSTALLDIR "$PROGRAMFILES\${COMPANY}\${APPNAME}"
+
+Name "${APPNAME}"
+OutFile "${APPNAME}-Setup.exe"
+InstallDir "${INSTALLDIR}"
+
 RequestExecutionLevel admin
-ShowInstDetails show
+
+Page Directory
+Page InstFiles
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "installer\input\*.*"
-
-  ; Desktop shortcut
-  CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
-
-  ; Start Menu shortcut
-  CreateDirectory "$SMPROGRAMS\${APP_NAME}"
-  CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
+  File /r "input\*.*"
+  CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 SectionEnd
 
 Section "Uninstall"
-  Delete "$DESKTOP\${APP_NAME}.lnk"
-  Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
-  RMDir "$SMPROGRAMS\${APP_NAME}"
+  Delete "$DESKTOP\${APPNAME}.lnk"
   RMDir /r "$INSTDIR"
 SectionEnd
 
