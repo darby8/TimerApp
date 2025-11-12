@@ -1,7 +1,7 @@
 // TopStatsPanel.qml
-import QtQuick 2.15
-import QtQuick.Layouts 1.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 import "../pages"
 Row {
     property int totalSeconds: TimerManager.seconds
