@@ -65,7 +65,7 @@ jobs:
         run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
             --outputdir Qt \
-            --modules qtdeclarative qtquickcontrols2 qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
+            --modules  qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
       - name: Configure CMake
