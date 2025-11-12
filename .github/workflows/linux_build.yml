@@ -19,6 +19,13 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
+    
+    
+      - name: Install Git (needed for checkout with submodules)
+        run: |
+          apt-get update
+          apt-get install -y git
+          
       - name: Checkout repository (with submodules)
         uses: actions/checkout@v4
         with:
