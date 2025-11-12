@@ -64,4 +64,21 @@ jobs:
         with:
           name: build-release
           path: ${{ env.BUILD_DIR }}\Release
+        
+        
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis -y
+
+      - name: Create NSIS installer
+        shell: pwsh
+        run: |
+          makensis installer.nsi
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: project-overwatch-setup.exe
+
 
