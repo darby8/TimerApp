@@ -4,18 +4,17 @@
 
 OutFile "project-overwatch-setup.exe"
 InstallDir "${APP_DIR}"
-
 RequestExecutionLevel admin
 ShowInstDetails show
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "build\Release\*.*"
+  File /r "installer\input\*.*"
 
-  ; Create a shortcut on the desktop
+  ; Desktop shortcut
   CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
 
-  ; Add to Start Menu
+  ; Start Menu shortcut
   CreateDirectory "$SMPROGRAMS\${APP_NAME}"
   CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
 SectionEnd
