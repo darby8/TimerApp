@@ -116,7 +116,7 @@ jobs:
           [Desktop Entry]
           Name=Project Overwatch
           Exec=$APP_NAME
-          Icon=$APP_NAME
+          Icon=$pulse.png
           Type=Application
           Categories=Utility;
           EOF
