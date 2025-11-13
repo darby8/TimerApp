@@ -152,6 +152,7 @@ jobs:
           chmod +x linuxdeployqt
 
 
+           
       - name: Build AppImage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
@@ -159,16 +160,14 @@ jobs:
           export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
 
-          # Copy QML modules into AppDir for linuxdeployqt
-          mkdir -p $APP_DIR/usr/qml
-          cp -r $GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml/* $APP_DIR/usr/qml/
-
+          # Build AppImage using linuxdeployqt
           ./linuxdeployqt $APP_DIR/usr/bin/$APP_NAME \
             -appimage \
-            -qmldir $APP_DIR/usr/qml \
+            -qmldir $GITHUB_WORKSPACE/QML \
             -bundle-non-qt-libs \
             -no-strip \
             -icon $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+
 
 
       # ✅ Upload AppImage
