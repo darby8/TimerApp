@@ -153,11 +153,15 @@ jobs:
 
 
 
-      # ✅ Fix missing NSS libs (for QtWebEngine)
-      - name: Install NSS dependencies
+      - name: Install QtWebEngine runtime dependencies
         run: |
           apt-get update
-          apt-get install -y libnss3 libnspr4 libxss1 libasound2
+          apt-get install -y \
+            libnss3 \
+            libnspr4 \
+            libxss1 \
+            libasound2 \
+            libxcomposite1
 
 
       - name: Build AppImage
