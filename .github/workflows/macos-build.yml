@@ -77,4 +77,3 @@ jobs:
         with:
           name: project-overwatch-macOS
           path: ${{ env.BUILD_DIR }}/*.dmg
-
