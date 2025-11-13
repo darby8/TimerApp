@@ -90,9 +90,10 @@ jobs:
           echo "✅ Ad-hoc signed app bundle."
 
       # ✅ Create drag-to-install DMG
+
       - name: Create drag-and-drop DMG
         run: |
-          APP_NAME=$(basename "$APP_BUNDLE")
+          APP_NAME=$(basename "$APP_BUNDLE" .app)
           DMG_FILE="${{ env.DMG_NAME }}"
           create-dmg \
             --volname "${APP_NAME}" \
@@ -104,6 +105,7 @@ jobs:
             "$DMG_FILE" "$(dirname "$APP_BUNDLE")"
           echo "✅ Created DMG: $DMG_FILE"
           echo "DMG_FILE=$DMG_FILE" >> $GITHUB_ENV
+
 
       # ✅ Upload artifact
       - name: Upload macOS DMG Artifact
