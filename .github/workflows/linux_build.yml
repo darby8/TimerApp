@@ -186,80 +186,66 @@ jobs:
             -appimage
 
 
-      - name: Install Qt Installer Framework (QtIFW)
+
+      - name: Install Qt Installer Framework
         run: |
-          echo "Listing available Qt Installer Framework versions..."
-          python3 -m aqt list-tool linux desktop tools_ifw | tail -n 10 || true
+          echo "Downloading Qt Installer Framework (QtIFW)..."
+          wget -q https://download.qt.io/official_releases/qt-installer-framework/4.6.0/QtInstallerFramework-linux-x64-4.6.0.run -O QtIFW.run
+          chmod +x QtIFW.run
+          ./QtIFW.run --platform minimal --verbose --script /dev/stdin <<'EOF'
+          var component = installer.addComponent("qt.tools.ifw.46");
+          component.installationRequested = true;
+          EOF
+          mkdir -p $GITHUB_WORKSPACE/QtIFW
+          mv /opt/QtInstallerFramework/* $GITHUB_WORKSPACE/QtIFW/ || true
+          echo "$GITHUB_WORKSPACE/QtIFW/bin" >> $GITHUB_PATH
+          echo "✅ Qt Installer Framework installed successfully"
 
-          # Detect latest available IFW version (fallback to 4.7.0 if not found)
-          IFW_VERSION=$(python3 -m aqt list-tool linux desktop tools_ifw 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | tail -n 1)
-          IFW_VERSION=${IFW_VERSION:-4.7.0}
-          echo "Detected IFW version: $IFW_VERSION"
-
-          # Install IFW under QtIFW/
-          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW
-
-          # Add IFW binaries (binarycreator, repogen, etc.) to PATH
-          export PATH="$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/$IFW_VERSION/bin:$PATH"
-          echo "$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/$IFW_VERSION/bin" >> $GITHUB_PATH
-
-          echo "✅ Qt Installer Framework $IFW_VERSION installed successfully."
-
-
-
-      # ✅ Create QtIFW directory structure
-      - name: Create installer structure
+      # ✅ Create QtIFW Installer folder structure
+      - name: Create QtIFW folder structure
         run: |
-          mkdir -p installer/config
-          mkdir -p installer/packages/com.project.overwatch/meta
-          mkdir -p installer/packages/com.project.overwatch/data
-
+          mkdir -p installer/config installer/packages/com.project.overwatch/meta installer/packages/com.project.overwatch/data
+          
           cat <<EOF > installer/config/config.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
               <Name>Project Overwatch</Name>
               <Version>1.0.0</Version>
               <Title>Project Overwatch Installer</Title>
-              <Publisher>YourCompany</Publisher>
+              <Publisher>Your Company</Publisher>
               <StartMenuDir>Project Overwatch</StartMenuDir>
               <TargetDir>@HomeDir@/ProjectOverwatch</TargetDir>
           </Installer>
           EOF
 
           cat <<EOF > installer/packages/com.project.overwatch/meta/package.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <Package>
               <DisplayName>Project Overwatch</DisplayName>
-              <Description>Qt-based monitoring application</Description>
+              <Description>Cross-platform Qt Application</Description>
               <Version>1.0.0</Version>
-              <ReleaseDate>$(date +%Y-%m-%d)</ReleaseDate>
+              <ReleaseDate>2025-11-13</ReleaseDate>
               <Default>true</Default>
               <Script>installscript.qs</Script>
           </Package>
           EOF
 
-          cat <<'EOF' > installer/packages/com.project.overwatch/meta/installscript.qs
-          function Component() {}
-          Component.prototype.createOperations = function() {
-              component.createOperations();
-          }
-          EOF
+          echo 'function Component() {}' > installer/packages/com.project.overwatch/meta/installscript.qs
 
-          # Copy AppImage or binary into data folder
-          cp ./*.AppImage installer/packages/com.project.overwatch/data/ || true
-          cp $BUILD_DIR/$APP_NAME installer/packages/com.project.overwatch/data/ || true
+          # ✅ Copy built AppImage as payload
+          cp ./*.AppImage installer/packages/com.project.overwatch/data/
 
-      # ✅ Build the installer using binarycreator
+      # ✅ Build Qt Installer package
       - name: Build Qt Installer
         run: |
-          export PATH="$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/4.7/bin:$PATH"
-          binarycreator --config installer/config/config.xml \
-                        --packages installer/packages \
-                        ProjectOverwatchInstaller.run
+          binarycreator -c installer/config/config.xml -p installer/packages ProjectOverwatchInstaller.run
 
-      # ✅ Upload installer
-      - name: Upload Qt Installer
+      # ✅ Upload Installer
+      - name: Upload QtIFW Installer
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-linux-installer
+          name: ProjectOverwatch-QtIFW-Installer
           path: ProjectOverwatchInstaller.run
+
 
 
