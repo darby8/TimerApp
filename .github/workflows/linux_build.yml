@@ -243,11 +243,12 @@ jobs:
           # ✅ Copy AppImage automatically
           cp *.AppImage installer/input/packages/com.yourcompany.projectoverwatch/data/ || echo "⚠️ No AppImage found!"
 
+
       - name: Install Qt Installer Framework (QtIFW)
         run: |
-          pip install aqtinstall==3.1.18
+          pip install aqtinstall==3.1.18 --root-user-action=ignore
           echo "Listing available Qt Installer Framework versions..."
-          python3 -m aqt list-tool linux desktop tools_ifw --arch x64 > ifw_versions.txt
+          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt
           cat ifw_versions.txt
 
           IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1)
@@ -255,6 +256,7 @@ jobs:
 
           python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW
           echo "IFW_PATH=$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/$IFW_VERSION/bin" >> $GITHUB_ENV
+
 
 
       # ✅ Build GUI Installer (.run file)
