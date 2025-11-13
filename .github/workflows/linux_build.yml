@@ -1,4 +1,4 @@
-name: macOS Qt Build (project-overwatch)
+name: macOS Qt Build (Drag-and-Drop DMG)
 
 on:
   push:
@@ -6,75 +6,73 @@ on:
   workflow_dispatch:
 
 jobs:
-  macos-build:
+  mac-build:
     runs-on: macos-latest
 
     env:
       QT_VERSION: 6.5.3
-      BUILD_DIR: build
-      APP_NAME: project-overwatch
-      WHID_VERSION: 1.0.0
-      SIGN_CERT: "Developer ID Application: Your Name (TEAMID12345)"  # replace with your actual cert
-      QTDIR: ${{ github.workspace }}/Qt/${{ env.QT_VERSION }}/macos
+      APP_NAME: Project Overwatch
 
     steps:
-      # ✅ Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      # ✅ Checkout source code
+      - uses: actions/checkout@v4
 
-      # ✅ Install Python and aqtinstall
-      - name: Install Python & aqtinstall
+      # ✅ Install dependencies (Python + aqtinstall + create-dmg)
+      - name: Install Python & aqt (venv)
         run: |
           brew install python3 create-dmg
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install aqtinstall==3.1.18
+          pip install aqtinstall
           echo "PATH=$PWD/venv/bin:$PATH" >> $GITHUB_ENV
 
       # ✅ Install Qt
       - name: Install Qt ${{ env.QT_VERSION }}
         run: |
-          python3 -m aqt install-qt mac desktop $QT_VERSION clang_64 --outputdir Qt \
-            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
-          echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/macos" >> $GITHUB_ENV
-          echo "QTDIR=$GITHUB_WORKSPACE/Qt/$QT_VERSION/macos" >> $GITHUB_ENV
+          aqt install-qt mac desktop $QT_VERSION clang_64 --outputdir Qt
 
-      # ✅ Configure CMake
+      # ✅ Configure and build
       - name: Configure CMake
         run: |
-          cmake -S . -B $BUILD_DIR \
-            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
+          cmake -S . -B build \
+            -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/macos \
             -DCMAKE_BUILD_TYPE=Release
 
-      # ✅ Build Project
-      - name: Build Project
-        run: cmake --build $BUILD_DIR --parallel
+      - name: Build
+        run: cmake --build build --parallel
 
-      # ✅ Deploy and create signed DMG
-      - name: Deploy & Create Signed DMG
+      # ✅ Bundle Qt libs and QML into the .app
+      - name: Deploy Qt (macdeployqt)
         run: |
-          APP_PATH="$BUILD_DIR/${APP_NAME}.app"
-          echo "📦 Found app bundle at: $APP_PATH"
-          "$QTDIR/bin/macdeployqt" "$APP_PATH" \
-            -dmg \
-            -appstore-compliant \
-            -codesign="${SIGN_CERT}"
+          APP=$(find build -name "*.app" -type d | head -n 1)
+          echo "Found app bundle: $APP"
+          $GITHUB_WORKSPACE/Qt/$QT_VERSION/macos/bin/macdeployqt "$APP" -qmldir=. -verbose=2
+          echo "APP_BUNDLE=$APP" >> $GITHUB_ENV
 
-      # ✅ Remove quarantine (sometimes needed)
-      - name: Remove quarantine
-        run: xattr -cr "$BUILD_DIR/${APP_NAME}.app"
+      # ✅ Remove quarantine (required on CI)
+      - name: Remove Quarantine Flags
+        run: xattr -cr "$APP_BUNDLE"
 
-      # ✅ List outputs
-      - name: List build outputs
-        run: ls -lh $BUILD_DIR
+      # ✅ Create drag-and-drop DMG
+      - name: Create DMG Installer
+        run: |
+          APP_PATH="${APP_BUNDLE}"
+          DMG_NAME="${APP_NAME}.dmg"
+          create-dmg \
+            --volname "${APP_NAME}" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 120 \
+            --icon "${APP_NAME}.app" 150 200 \
+            --app-drop-link 450 200 \
+            "$DMG_NAME" "$(dirname "$APP_PATH")"
+          echo "DMG_FILE=$DMG_NAME" >> $GITHUB_ENV
 
-      # ✅ Upload DMG Artifact
-      - name: Upload macOS DMG Artifact
+      # ✅ Upload final DMG
+      - name: Upload DMG Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-macOS
-          path: ${{ env.BUILD_DIR }}/*.dmg
+          name: macOS-Installer
+          path: ${{ env.DMG_FILE }}
 
