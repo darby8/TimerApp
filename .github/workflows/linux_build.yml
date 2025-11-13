@@ -191,13 +191,15 @@ jobs:
           name: project-overwatch-Linux-AppImage
           path: "*.AppImage"
 
-      # ✅ Prepare Qt Installer Framework structure
       - name: Prepare Qt Installer Framework structure
         run: |
           mkdir -p installer/input/config
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/meta
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/data
 
+          echo "🧱 Creating QtIFW config files..."
+
+          # ✅ Main installer configuration (defines metadata and post-install run behavior)
           cat <<EOF > installer/input/config/config.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
@@ -207,10 +209,11 @@ jobs:
               <Publisher>Your Company</Publisher>
               <StartMenuDir>Project Overwatch</StartMenuDir>
               <TargetDir>@HomeDir@/ProjectOverwatch</TargetDir>
-              <RunProgram>@TargetDir@/appproject-overwatch</RunProgram>
+              <RunProgram>@TargetDir@/project-overwatch.AppImage</RunProgram>
           </Installer>
           EOF
 
+          # ✅ Package metadata
           cat <<EOF > installer/input/packages/com.yourcompany.projectoverwatch/meta/package.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Package>
@@ -223,25 +226,49 @@ jobs:
           </Package>
           EOF
 
-          cat <<EOF > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
+          # ✅ Installer behavior script (mark executable + auto-launch + optional desktop shortcut)
+          cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
           function Component() {}
 
           Component.prototype.createOperations = function() {
+              // Default copy operations
               component.createOperations();
+
               try {
+                  var targetDir = installer.value("TargetDir");
+                  var appPath = targetDir + "/project-overwatch.AppImage";
+
+                  // Make AppImage executable
+                  component.addOperation("Execute", "chmod", "+x", appPath);
+
+                  // Optional: Create desktop shortcut
+                  component.addOperation("CreateDesktopEntry",
+                      appPath,
+                      "Project Overwatch",
+                      "Project Overwatch - Qt App",
+                      "Utility",
+                      appPath);
+
+                  // Auto-launch the app after installation
                   if (installer.isInstaller()) {
-                      component.addOperation("CreateShortcut",
-                          "@TargetDir@/appproject-overwatch",
-                          "@StartMenuDir@/Project Overwatch.desktop");
+                      component.addOperation("ExecuteDetached", appPath, "");
                   }
+
               } catch (e) {
-                  console.log("Shortcut creation failed: " + e);
+                  console.log("❌ Installer error: " + e);
               }
           }
           EOF
 
-          # ✅ Copy AppImage automatically
-          cp *.AppImage installer/input/packages/com.yourcompany.projectoverwatch/data/ || echo "⚠️ No AppImage found!"
+          # ✅ Copy AppImage automatically and rename consistently
+          APPFILE=$(ls -1t *.AppImage | head -n 1)
+          if [ -f "$APPFILE" ]; then
+            cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
+            echo "✅ Copied $APPFILE -> project-overwatch.AppImage"
+          else
+            echo "⚠️ No AppImage found!"
+          fi
+
 
 
  
