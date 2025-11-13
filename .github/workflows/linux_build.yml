@@ -186,9 +186,6 @@ jobs:
             -appimage
 
 
-
-
-	     
       - name: Install Qt Installer Framework
         run: |
           python3 -m aqt install-tool linux desktop ifw 4.7.0 --outputdir QtIFW
