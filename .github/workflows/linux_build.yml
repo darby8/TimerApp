@@ -152,7 +152,6 @@ jobs:
           chmod +x linuxdeployqt
 
 
-           
       - name: Build AppImage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
@@ -167,6 +166,7 @@ jobs:
             -bundle-non-qt-libs \
             -no-strip \
             -icon $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+
 
 
 
