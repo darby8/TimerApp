@@ -159,13 +159,15 @@ jobs:
           export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
 
-          # Build AppImage using linuxdeployqt
-          ./linuxdeployqt $APP_DIR/usr/bin/$APP_NAME \
-            -appimage \
+          echo "Running linuxdeployqt with proper QML directory..."
+          ./linuxdeployqt \
+            $APP_DIR/usr/share/applications/$APP_NAME.desktop \
             -qmldir="$GITHUB_WORKSPACE/QML" \
+            -qmake=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin/qmake \
             -bundle-non-qt-libs \
-            -no-strip \
-            -icon $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+            -appimage
+
+
 
 
 
