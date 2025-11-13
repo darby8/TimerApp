@@ -188,12 +188,66 @@ jobs:
 
 
 
+	     
+      - name: Install Qt Installer Framework
+        run: |
+          python3 -m aqt install-tool linux desktop ifw 4.7.0 --outputdir QtIFW
+          export PATH="$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/4.7/bin:$PATH"
+          echo "$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/4.7/bin" >> $GITHUB_PATH
 
+      # ✅ Create QtIFW directory structure
+      - name: Create installer structure
+        run: |
+          mkdir -p installer/config
+          mkdir -p installer/packages/com.project.overwatch/meta
+          mkdir -p installer/packages/com.project.overwatch/data
 
-      # ✅ Upload AppImage
-      - name: Upload AppImage
+          cat <<EOF > installer/config/config.xml
+          <Installer>
+              <Name>Project Overwatch</Name>
+              <Version>1.0.0</Version>
+              <Title>Project Overwatch Installer</Title>
+              <Publisher>YourCompany</Publisher>
+              <StartMenuDir>Project Overwatch</StartMenuDir>
+              <TargetDir>@HomeDir@/ProjectOverwatch</TargetDir>
+          </Installer>
+          EOF
+
+          cat <<EOF > installer/packages/com.project.overwatch/meta/package.xml
+          <Package>
+              <DisplayName>Project Overwatch</DisplayName>
+              <Description>Qt-based monitoring application</Description>
+              <Version>1.0.0</Version>
+              <ReleaseDate>$(date +%Y-%m-%d)</ReleaseDate>
+              <Default>true</Default>
+              <Script>installscript.qs</Script>
+          </Package>
+          EOF
+
+          cat <<'EOF' > installer/packages/com.project.overwatch/meta/installscript.qs
+          function Component() {}
+          Component.prototype.createOperations = function() {
+              component.createOperations();
+          }
+          EOF
+
+          # Copy AppImage or binary into data folder
+          cp ./*.AppImage installer/packages/com.project.overwatch/data/ || true
+          cp $BUILD_DIR/$APP_NAME installer/packages/com.project.overwatch/data/ || true
+
+      # ✅ Build the installer using binarycreator
+      - name: Build Qt Installer
+        run: |
+          export PATH="$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/4.7/bin:$PATH"
+          binarycreator --config installer/config/config.xml \
+                        --packages installer/packages \
+                        ProjectOverwatchInstaller.run
+
+      # ✅ Upload installer
+      - name: Upload Qt Installer
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-Linux-AppImage
-          path: "*.AppImage"
+          name: project-overwatch-linux-installer
+          path: ProjectOverwatchInstaller.run
+
 
