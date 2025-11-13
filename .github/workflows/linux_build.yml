@@ -1,4 +1,4 @@
-name: Linux Qt Build (project-overwatch)
+name: Linux Qt6 Build (project-overwatch)
 
 on:
   push:
@@ -8,18 +8,15 @@ on:
 jobs:
   linux-build:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:20.04
 
     env:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
       APP_NAME: appproject-overwatch
       APP_DIR: AppDir
-      APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
-      # ✅ Install Git 2.40+ to avoid REST API fallback
+      # Install Git 2.40+ (for proper submodule support)
       - name: Install Git
         run: |
           apt-get update
@@ -28,14 +25,14 @@ jobs:
           apt-get update
           apt-get install -y git
 
-      # ✅ Checkout repository with submodules
+      # Checkout repository with submodules
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # ✅ Prepare environment (disable tzdata prompts)
+      # Prepare environment
       - name: Prepare environment
         run: |
           export DEBIAN_FRONTEND=noninteractive
@@ -44,50 +41,26 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
-      # ✅ Install base dependencies
+      # Install base dependencies
       - name: Install dependencies
         run: |
-          apt-get install -y \
-            build-essential \
-            cmake \
-            ninja-build \
-            patchelf \
-            wget \
-            curl \
-            imagemagick \
-            libgl1-mesa-dev \
-            libglu1-mesa-dev \
-            libegl1-mesa-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            libglib2.0-0 libglib2.0-dev \
-            libdbus-1-dev \
-            libfontconfig1-dev \
-            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
-            libxrender1 libxrandr2 libegl1 libglu1-mesa \
+          apt-get install -y build-essential cmake ninja-build patchelf wget curl imagemagick \
+            libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libglib2.0-0 libglib2.0-dev libdbus-1-dev libfontconfig1-dev \
+            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 libxrender1 libxrandr2 \
             libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
-            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
-            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
-            libx11-xcb-dev \
-            libxkbfile-dev \
-            libxtst-dev \
-            libxt-dev \
-            libxinerama-dev
+            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 libxcb-randr0 libxcb-xinerama0 \
+            libx11-xcb-dev libxkbfile-dev libxtst-dev libxt-dev libxinerama-dev \
+            libpq-dev libpq5 libmysqlclient-dev unixodbc unixodbc-dev odbcinst odbcinst1debian2
 
-      # ✅ Install database libraries
-      - name: Install PostgreSQL/MySQL/ODBC libraries
-        run: |
-          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
-            unixodbc unixodbc-dev odbcinst odbcinst1debian2
-
-      # ✅ Install Python & aqtinstall
+      # Install Python & aqtinstall
       - name: Install Python & aqt
         run: |
           apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
-      # ✅ Install Qt 6.5.3
+      # Install Qt6
       - name: Install Qt ${{ env.QT_VERSION }}
         run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
@@ -95,18 +68,15 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
-      # ✅ Configure CMake
+      # Configure CMake
       - name: Configure CMake
-        run: |
-          cmake -S . -B $BUILD_DIR -G Ninja \
-            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
-            -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B $BUILD_DIR -G Ninja -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" -DCMAKE_BUILD_TYPE=Release
 
-      # ✅ Build project
+      # Build project
       - name: Build Project
         run: cmake --build $BUILD_DIR --config Release --parallel
 
-      # ✅ Detect built executable
+      # Detect built executable
       - name: Detect executable
         id: findexe
         run: |
@@ -114,21 +84,24 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Found executable: $EXE"
 
-      # ✅ Create AppDir structure and handle icon
+      # Create AppDir and copy executable + QML + icon
       - name: Create AppDir
         run: |
           mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
           cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
           chmod +x $APP_DIR/usr/bin/$APP_NAME
 
-          # Copy icon (must be: icons/appproject-overwatch.png)
+          # Copy QML folder
+          cp -r QML $APP_DIR/usr/bin/QML
+
+          # Copy icon (must be icons/appproject-overwatch.png)
           if [ -f icons/$APP_NAME.png ]; then
             cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
           else
-            # placeholder icon if missing
             convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png || touch $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
           fi
 
+          # Create .desktop file
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
           [Desktop Entry]
           Name=Project Overwatch
@@ -138,36 +111,24 @@ jobs:
           Categories=Utility;
           EOF
 
-      # ✅ Download linuxdeploy
-      - name: Download linuxdeploy & plugin
-        run: |
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy*.AppImage
-
-      # ✅ Download linuxdeployqt
+      # Download linuxdeployqt
       - name: Download linuxdeployqt
         run: |
           wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
           chmod +x linuxdeployqt
 
-      # ✅ Build AppImage
+      # Build AppImage using linuxdeployqt
       - name: Build AppImage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
-          export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
-          export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
+          ./linuxdeployqt \
+            $APP_DIR/usr/bin/$APP_NAME \
+            -qmldir=$APP_DIR/usr/bin/QML \
+            -bundle-non-qt-libs \
+            -appimage
 
-          ./linuxdeploy-x86_64.AppImage \
-            --appdir $APP_DIR \
-            -e $APP_DIR/usr/bin/$APP_NAME \
-            -i $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png \
-            -d $APP_DIR/usr/share/applications/$APP_NAME.desktop \
-            --plugin qt \
-            --output appimage || echo "⚠️ Icon/plugin issue ignored"
-
-      # ✅ Upload AppImage
+      # Upload AppImage
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
