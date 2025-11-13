@@ -184,13 +184,6 @@ jobs:
           echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
           echo "✅ Built AppImage: $APPIMAGE"
 
-      # ✅ Upload AppImage
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-overwatch-Linux-AppImage
-          path: "*.AppImage"
-
       - name: Prepare Qt Installer Framework structure
         run: |
           mkdir -p installer/input/config
@@ -199,7 +192,7 @@ jobs:
 
           echo "🧱 Creating QtIFW config files..."
 
-          # ✅ Main installer configuration (defines metadata and post-install run behavior)
+          # ✅ Main installer configuration
           cat <<EOF > installer/input/config/config.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
@@ -226,12 +219,11 @@ jobs:
           </Package>
           EOF
 
-          # ✅ Installer behavior script (mark executable + auto-launch + optional desktop shortcut)
+          # ✅ Clean, compatible installer script
           cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
           function Component() {}
 
           Component.prototype.createOperations = function() {
-              // Default copy operations
               component.createOperations();
 
               try {
@@ -239,23 +231,25 @@ jobs:
                   var appPath = targetDir + "/project-overwatch.AppImage";
 
                   // Make AppImage executable
-                  component.addOperation("Execute", "chmod", "+x", appPath);
+                  component.addOperation("Execute", "/bin/chmod", "+x", appPath);
 
-                  // Optional: Create desktop shortcut
-                  component.addOperation("CreateDesktopEntry",
-                      appPath,
-                      "Project Overwatch",
-                      "Project Overwatch - Qt App",
-                      "Utility",
-                      appPath);
-
-                  // Auto-launch the app after installation
-                  if (installer.isInstaller()) {
-                      component.addOperation("ExecuteDetached", appPath, "");
-                  }
+                  // Create a .desktop entry
+                  var desktopFile = targetDir + "/project-overwatch.desktop";
+                  component.addOperation("CreateDesktopEntry", desktopFile, appPath);
 
               } catch (e) {
                   console.log("❌ Installer error: " + e);
+              }
+          }
+
+          // ✅ Run app automatically after installation
+          Component.prototype.installationFinished = function() {
+              try {
+                  var targetDir = installer.value("TargetDir");
+                  var appPath = targetDir + "/project-overwatch.AppImage";
+                  QProcess.startDetached(appPath, []);
+              } catch (e) {
+                  console.log("⚠️ Failed to auto-run app: " + e);
               }
           }
           EOF
@@ -267,52 +261,6 @@ jobs:
             echo "✅ Copied $APPFILE -> project-overwatch.AppImage"
           else
             echo "⚠️ No AppImage found!"
-          fi
-
-
-
- 
-      - name: Install Qt Installer Framework (QtIFW)
-        run: |
-          pip install aqtinstall==3.1.18 --root-user-action=ignore
-          echo "Listing available Qt Installer Framework versions..."
-          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt || true
-          cat ifw_versions.txt || true
-
-          IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1 || echo "4.6.1")
-          echo "Detected IFW version: $IFW_VERSION"
-
-          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || \
-          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
-
-      # ✅ Detect binarycreator automatically
-      - name: Fix IFW path detection
-        run: |
-          echo "🔍 Searching for binarycreator..."
-          IFW_PATH=$(find "$GITHUB_WORKSPACE/QtIFW" -type f -name binarycreator -exec dirname {} \; | head -n 1)
-          if [ -z "$IFW_PATH" ]; then
-            echo "❌ binarycreator not found under QtIFW folder!"
-            find "$GITHUB_WORKSPACE/QtIFW" -maxdepth 4 -type d
             exit 1
           fi
-          echo "✅ Found binarycreator at: $IFW_PATH"
-          echo "IFW_PATH=$IFW_PATH" >> $GITHUB_ENV
-
-
-
-
-      # ✅ Build GUI Installer (.run file)
-      - name: Build GUI Installer
-        run: |
-          $IFW_PATH/binarycreator \
-            -c installer/input/config/config.xml \
-            -p installer/input/packages \
-            project-overwatch-installer.run
-
-      # ✅ Upload GUI Installer
-      - name: Upload GUI Installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-overwatch-GUI-Installer
-          path: project-overwatch-installer.run
 
