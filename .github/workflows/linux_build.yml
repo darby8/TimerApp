@@ -121,7 +121,6 @@ jobs:
           cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
           chmod +x $APP_DIR/usr/bin/$APP_NAME
 
-          # Copy icon (must be: icons/appproject-overwatch.png)
           if [ -f icons/$APP_NAME.png ]; then
             cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
           else
@@ -165,15 +164,15 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
-      # ✅ Build AppImage
+      # ✅ Build AppImage and detect file
       - name: Build AppImage
+        id: appimage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
           export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
 
-          echo "Running linuxdeployqt with proper QML directory..."
           ./linuxdeployqt \
             $APP_DIR/usr/share/applications/$APP_NAME.desktop \
             -qmldir="$GITHUB_WORKSPACE/QML" \
@@ -181,8 +180,18 @@ jobs:
             -bundle-non-qt-libs \
             -appimage
 
+          APPIMAGE=$(ls -1t *.AppImage | head -n 1)
+          echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
+          echo "✅ Built AppImage: $APPIMAGE"
 
-      # ✅ Prepare Installer folder structure
+      # ✅ Upload AppImage
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-overwatch-Linux-AppImage
+          path: "*.AppImage"
+
+      # ✅ Prepare Qt Installer Framework structure
       - name: Prepare Qt Installer Framework structure
         run: |
           mkdir -p installer/input/config
@@ -231,8 +240,8 @@ jobs:
           }
           EOF
 
-          # Copy AppImage as data for installer
-          cp project-overwatch-*.AppImage installer/input/packages/com.yourcompany.projectoverwatch/data/
+          # ✅ Copy AppImage automatically
+          cp *.AppImage installer/input/packages/com.yourcompany.projectoverwatch/data/ || echo "⚠️ No AppImage found!"
 
       # ✅ Install Qt Installer Framework (QtIFW)
       - name: Install Qt Installer Framework (QtIFW)
