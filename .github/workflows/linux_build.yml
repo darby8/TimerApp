@@ -161,7 +161,13 @@ jobs:
             libnspr4 \
             libxss1 \
             libasound2 \
-            libxcomposite1
+            libxcomposite1 \
+            libxdamage1 \
+            locales
+          # ✅ Ensure UTF-8 locale to silence the warning
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
+
 
 
       - name: Build AppImage
