@@ -244,18 +244,33 @@ jobs:
           cp *.AppImage installer/input/packages/com.yourcompany.projectoverwatch/data/ || echo "⚠️ No AppImage found!"
 
 
+ 
       - name: Install Qt Installer Framework (QtIFW)
         run: |
           pip install aqtinstall==3.1.18 --root-user-action=ignore
           echo "Listing available Qt Installer Framework versions..."
-          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt
-          cat ifw_versions.txt
+          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt || true
+          cat ifw_versions.txt || true
 
-          IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1)
+          IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1 || echo "4.6.1")
           echo "Detected IFW version: $IFW_VERSION"
 
-          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW
-          echo "IFW_PATH=$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/$IFW_VERSION/bin" >> $GITHUB_ENV
+          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || \
+          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+
+      # ✅ Detect binarycreator automatically
+      - name: Fix IFW path detection
+        run: |
+          echo "🔍 Searching for binarycreator..."
+          IFW_PATH=$(find "$GITHUB_WORKSPACE/QtIFW" -type f -name binarycreator -exec dirname {} \; | head -n 1)
+          if [ -z "$IFW_PATH" ]; then
+            echo "❌ binarycreator not found under QtIFW folder!"
+            find "$GITHUB_WORKSPACE/QtIFW" -maxdepth 4 -type d
+            exit 1
+          fi
+          echo "✅ Found binarycreator at: $IFW_PATH"
+          echo "IFW_PATH=$IFW_PATH" >> $GITHUB_ENV
+
 
 
 
