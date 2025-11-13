@@ -162,7 +162,7 @@ jobs:
           # Build AppImage using linuxdeployqt
           ./linuxdeployqt $APP_DIR/usr/bin/$APP_NAME \
             -appimage \
-            -qmldir $GITHUB_WORKSPACE/QML \
+            -qmldir="$GITHUB_WORKSPACE/QML" \
             -bundle-non-qt-libs \
             -no-strip \
             -icon $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
