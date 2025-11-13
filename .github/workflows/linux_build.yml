@@ -196,10 +196,10 @@ jobs:
           IFW_VERSION=${IFW_VERSION:-4.7.0}
           echo "Detected IFW version: $IFW_VERSION"
 
-         # Install IFW under QtIFW/
+          # Install IFW under QtIFW/
           python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW
 
-         # Add IFW binaries (binarycreator, repogen, etc.) to PATH
+          # Add IFW binaries (binarycreator, repogen, etc.) to PATH
           export PATH="$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/$IFW_VERSION/bin:$PATH"
           echo "$GITHUB_WORKSPACE/QtIFW/Tools/QtInstallerFramework/$IFW_VERSION/bin" >> $GITHUB_PATH
 
