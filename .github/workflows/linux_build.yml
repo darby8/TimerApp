@@ -1,0 +1,80 @@
+name: macOS Qt Build (project-overwatch)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  macos-build:
+    runs-on: macos-latest
+
+    env:
+      QT_VERSION: 6.5.3
+      BUILD_DIR: build
+      APP_NAME: project-overwatch
+      WHID_VERSION: 1.0.0
+      SIGN_CERT: "Developer ID Application: Your Name (TEAMID12345)"  # replace with your actual cert
+      QTDIR: ${{ github.workspace }}/Qt/${{ env.QT_VERSION }}/macos
+
+    steps:
+      # ✅ Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ✅ Install Python and aqtinstall
+      - name: Install Python & aqtinstall
+        run: |
+          brew install python3 create-dmg
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install aqtinstall==3.1.18
+          echo "PATH=$PWD/venv/bin:$PATH" >> $GITHUB_ENV
+
+      # ✅ Install Qt
+      - name: Install Qt ${{ env.QT_VERSION }}
+        run: |
+          python3 -m aqt install-qt mac desktop $QT_VERSION clang_64 --outputdir Qt \
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
+          echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/macos" >> $GITHUB_ENV
+          echo "QTDIR=$GITHUB_WORKSPACE/Qt/$QT_VERSION/macos" >> $GITHUB_ENV
+
+      # ✅ Configure CMake
+      - name: Configure CMake
+        run: |
+          cmake -S . -B $BUILD_DIR \
+            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      # ✅ Build Project
+      - name: Build Project
+        run: cmake --build $BUILD_DIR --parallel
+
+      # ✅ Deploy and create signed DMG
+      - name: Deploy & Create Signed DMG
+        run: |
+          APP_PATH="$BUILD_DIR/${APP_NAME}.app"
+          echo "📦 Found app bundle at: $APP_PATH"
+          "$QTDIR/bin/macdeployqt" "$APP_PATH" \
+            -dmg \
+            -appstore-compliant \
+            -codesign="${SIGN_CERT}"
+
+      # ✅ Remove quarantine (sometimes needed)
+      - name: Remove quarantine
+        run: xattr -cr "$BUILD_DIR/${APP_NAME}.app"
+
+      # ✅ List outputs
+      - name: List build outputs
+        run: ls -lh $BUILD_DIR
+
+      # ✅ Upload DMG Artifact
+      - name: Upload macOS DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-overwatch-macOS
+          path: ${{ env.BUILD_DIR }}/*.dmg
+
