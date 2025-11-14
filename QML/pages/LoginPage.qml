@@ -194,7 +194,6 @@ Item {
                         source: "qrc:/project-overwatch/icons/email.svg"
                         width: 20; height: 20
                         anchors.verticalCenter: parent.verticalCenter
-                        verticalAlignment: Text.AlignVCenter
                         anchors.left: parent.left
                         anchors.leftMargin: 10
                         sourceSize.height: height * Screen.devicePixelRatio
@@ -207,6 +206,7 @@ Item {
                         anchors.fill: parent
                         leftPadding: 38                // Padding should be icon width + margin
                         font.pixelSize: 12
+                        verticalAlignment: Text.AlignVCenter
                         placeholderText: "Enter your email"
                         color: "black"
                         background: null                // Use our Rectangle, not default background

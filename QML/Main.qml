@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick.Layouts 2.15
 import QtQuick.Window
 import "script.js" as Script
 import "./pages"
@@ -161,8 +161,6 @@ ApplicationWindow {
                         color: Theme.smalltxt
                         Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     }
-
-
                     Rectangle {
                         id: userButton
                         Layout.alignment: Qt.AlignRight
@@ -198,7 +196,7 @@ ApplicationWindow {
                         Row {
                             anchors.centerIn: parent
                             spacing: 4
-                            Image { source: "../icons/user.png"; width: 16; height: 16; smooth: true }
+                            Image { source: "qrc:/project-overwatch/icons/user.png"; width: 16; height: 16; smooth: true }
                             Text { text: "Welcome," +mainWindow.userName; font.pixelSize: 15; color: Theme.txtcolor;  }
                         }
 
