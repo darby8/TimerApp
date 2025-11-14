@@ -133,48 +133,6 @@ void Tracker::onTrackerTimeout() {
     shotTimer.start(jitter);
 }
 
-
-
-
-
-
-
-
-// void Tracker::onTrackerTimeout() {
-//     captureAndSend();
-
-//     if (isRunning) {
-//         int randomDelay = QRandomGenerator::global()->bounded(minInterval, maxInterval + 1);
-//         qDebug() << "[Tracker] Next screenshot in" << randomDelay << "ms";
-//         trackerTimer.start(randomDelay);
-//     }
-// }
-
-
-
-// void Tracker::start() {
-//     if (isRunning) return;
-//     isRunning = true;
-
-//     // Start global hook
-//     std::thread([] {
-//         hook_set_dispatch_proc(handle_event);
-//         hook_run();
-//     }).detach();
-
-//     // 🔹 Pick first random delay between min and max
-//     int randomDelay = QRandomGenerator::global()->bounded(minInterval, maxInterval + 1);
-//     trackerTimer.start(randomDelay);
-
-//     syncTimer.start();
-
-//     QTimer::singleShot(0, this, &Tracker::syncPendingEvents);
-
-//     qDebug() << "[Tracker] started. First screenshot in" << randomDelay << "ms";
-// }
-
-
-
 void Tracker::start() {
     if (isRunning) return;
     isRunning = true;
@@ -186,26 +144,12 @@ void Tracker::start() {
 
     trackerTimer.setInterval(maxInterval);  // base window length from API
     trackerTimer.start();
-
-    // schedule first capture in first window
     onTrackerTimeout();
-
     syncTimer.start();
     QTimer::singleShot(0, this, &Tracker::syncPendingEvents);
 
     qDebug() << "[Tracker] started. Base window (period) =" << trackerTimer.interval() << "ms";
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 void Tracker::setAccessToken(const QString &token) {

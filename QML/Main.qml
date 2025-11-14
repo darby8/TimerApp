@@ -139,7 +139,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                         Image {
-                            source: "../icons/pulse.svg"
+                            source: "qrc:/project-overwatch/icons/pulse.svg"
                             width: 25; height: 25
                             sourceSize.width: width * Screen.devicePixelRatio
                             sourceSize.height: height * Screen.devicePixelRatio
@@ -299,7 +299,7 @@ ApplicationWindow {
                         Row {
                             anchors.centerIn: parent
                             Image {
-                                source: "../icons/times.svg"
+                                source: "qrc:/project-overwatch/icons/times.svg"
                                 width: 22
                                 height: 20
                                 sourceSize.width: width * Screen.devicePixelRatio
@@ -353,7 +353,7 @@ ApplicationWindow {
                             anchors.centerIn: parent
                             spacing:5
                             Image {
-                                source: "../icons/align.svg"
+                                source: "qrc:/project-overwatch/icons/align.svg"
                                 width: 18
                                 height: 18
                                 sourceSize.width: width * Screen.devicePixelRatio
@@ -415,7 +415,7 @@ ApplicationWindow {
                             anchors.centerIn: parent
                             spacing:10
                             Image {
-                                source: "../icons/analytics.svg"
+                                source: "qrc:/project-overwatch/icons/analytics.svg"
                                 width: 16
                                 height: 16
                                 sourceSize.width: width * Screen.devicePixelRatio

@@ -26,7 +26,7 @@ Item {
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 8
                 Image {
-                    source: "../../icons/pulse.svg" // Substitute if you have an icon file
+                    source: "qrc:/project-overwatch/icons/pulse.svg" // Substitute if you have an icon file
                     width: 25; height:25
                     sourceSize.width: width * Screen.devicePixelRatio
                     sourceSize.height: height * Screen.devicePixelRatio
@@ -70,7 +70,7 @@ Item {
                         anchors.leftMargin: 16
                         spacing: 15
                         Image {
-                            source: "../../icons/google.svg"
+                            source: "qrc:/project-overwatch/icons/google.svg"
                             width: 20; height: 20
                             anchors.verticalCenter: parent.verticalCenter
                             sourceSize.height: height * Screen.devicePixelRatio
@@ -121,7 +121,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.verticalCenter: parent.verticalCenter
                         Image {
-                            source: "../../icons/microsoft.svg"
+                            source: "qrc:/project-overwatch/icons/microsoft.svg"
                             width: 20; height: 20
                             anchors.verticalCenter: parent.verticalCenter
                             sourceSize.height: height * Screen.devicePixelRatio
@@ -191,9 +191,10 @@ Item {
 
                     // Icon inside the input, placed absolutely
                     Image {
-                        source: "../../icons/email.svg"
+                        source: "qrc:/project-overwatch/icons/email.svg"
                         width: 20; height: 20
                         anchors.verticalCenter: parent.verticalCenter
+                        verticalAlignment: Text.AlignVCenter
                         anchors.left: parent.left
                         anchors.leftMargin: 10
                         sourceSize.height: height * Screen.devicePixelRatio
@@ -235,7 +236,7 @@ Item {
 
                     // Icon inside the input, left side
                     Image {
-                        source: "../../icons/eye.svg"
+                        source: "qrc:/project-overwatch/icons/eye.svg"
                         width: 20; height: 20
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
@@ -250,6 +251,7 @@ Item {
                         rightPadding: 36                   // Space for eye button at right
                         font.pixelSize: 12
                         placeholderText: "Password"
+                        verticalAlignment: Text.AlignVCenter
                         color: "black"
                         echoMode: TextInput.Password
                         background: null
@@ -263,7 +265,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
 
                         Button {
-                            icon.source: "../../icons/eye.svg"
+                            icon.source: "qrc:/project-overwatch/icons/eye.svg"
                             background: Rectangle { color: "transparent" }
                             onClicked: passwordInput.echoMode === TextInput.Password ?
                                            passwordInput.echoMode = TextInput.Normal :
