@@ -118,7 +118,7 @@ ApplicationWindow {
             Rectangle {
                 width: parent.width-20
                 height: 54
-                color: Theme.bg
+                color: "#6a5acd"
 
                 radius: 12
                 border.width: 1

@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     // QApplication app(argc, argv);
     SingleApplication app(argc, argv);
     app.setApplicationName("Productivity Tracker");
-    app.setWindowIcon(QIcon("../../icons/pulse.svg"));
+    app.setWindowIcon(QIcon("qrc:/image.png"));
 
 
 
