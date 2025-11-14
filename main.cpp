@@ -3,7 +3,6 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QIcon>
-
 #include "tracker.h"
 #include "TimerManager.h"
 #include "ScreenshotManager.h"
