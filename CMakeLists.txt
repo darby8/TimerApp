@@ -27,6 +27,12 @@ qt_add_executable(appproject-overwatch
     screenshot.cpp
 )
 
+if (WIN32)
+    set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/icons/app.rc")
+    target_sources(project-overwatch PRIVATE ${APP_ICON_RESOURCE})
+endif()
+
+
 qt_add_qml_module(appproject-overwatch
     URI project-overwatch
     VERSION 1.0
@@ -85,6 +91,7 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES icons/pulse.png
     RESOURCES icons/pulse.png
     RESOURCES icons/appproject-overwatch.png
+    RESOURCES icons/app.ico icons/app.rc
 )
 qt_import_qml_plugins(appproject-overwatch)
 qt_finalize_executable(appproject-overwatch)
