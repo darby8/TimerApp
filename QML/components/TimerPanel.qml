@@ -47,6 +47,7 @@ Rectangle {
                 radius: 12
                 border.color: Theme.softgray
                 border.width: 1
+                clip: true
 
                 Text {
                     id: timerText

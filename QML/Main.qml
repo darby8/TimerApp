@@ -130,17 +130,20 @@ ApplicationWindow {
 
                 RowLayout {
                     anchors.fill: parent
-                    Layout.margins: 12
+                    anchors.margins: 12
                     spacing: 8
                     visible: mainWindow.loggedIn
 
                     RowLayout {
                         spacing: 8
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
                         Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-
                         Image {
                             source: "qrc:/project-overwatch/icons/pulse.svg"
-                            width: 25; height: 25
+                            // width: 25; height: 25
+                            Layout.preferredHeight: 25
+                            Layout.preferredWidth: 25
                             sourceSize.width: width * Screen.devicePixelRatio
                             sourceSize.height: height * Screen.devicePixelRatio
                             smooth: true
@@ -150,7 +153,7 @@ ApplicationWindow {
                             text: tracker.appName
                             font.bold: true
                             font.pixelSize: 23
-                            // color: text
+                            color: Theme.text
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
@@ -166,7 +169,9 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignRight
                         Layout.rightMargin: 15
                         // Layout.bottomMargin: 10
-                        width: 170; height: 32
+                        // width: 170; height: 32
+                        Layout.preferredWidth: 170
+                        Layout.preferredHeight: 32
                         radius:10
                         border.width: 1
                         border.color: Theme.softgray
@@ -216,7 +221,6 @@ ApplicationWindow {
 
                             onClosed: userButton.lastCloseMs = Date.now()
                             background: Rectangle {
-
                                 radius:5
                                 border.width: 1
                                 border.color: "lightgray"
@@ -259,14 +263,6 @@ ApplicationWindow {
                             }
                         }
                     }
-                    Component.onCompleted: {
-                        console.log("Theme.bg =", Theme.bg)
-                        console.log("Theme.txtcolor =", Theme.txtcolor)
-                        console.log("Theme.smalltxt =", Theme.smalltxt)
-                        console.log("Theme.softgray =", Theme.softgray)
-                        console.log("Theme.colorBlue =", Theme.colorBlue)
-                    }
-
                 }
             }
 

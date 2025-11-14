@@ -24,8 +24,8 @@ Item {
 
         // Timer Panel
         TimerPanel {
-            Layout.preferredWidth: parent.width * 0.50
-            Layout.preferredHeight: parent.height
+            Layout.fillHeight: true
+            Layout.fillWidth: true
             color: Theme.bg
             border.color: Theme.softgray
             // danger: danger
@@ -35,8 +35,8 @@ Item {
 
         // Task Manager
         ScreenShot {
-            Layout.preferredWidth: parent.width * 0.50
-            Layout.preferredHeight: parent.height
+            Layout.fillHeight: true
+            Layout.fillWidth: true
             color: Theme.bg
             border.color: Theme.softgray
         }
