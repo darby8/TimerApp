@@ -118,7 +118,7 @@ ApplicationWindow {
             Rectangle {
                 width: parent.width-20
                 height: 54
-                color: "#6a5acd"
+                color: Theme.bg
 
                 radius: 12
                 border.width: 1
@@ -150,7 +150,7 @@ ApplicationWindow {
                             text: tracker.appName
                             font.bold: true
                             font.pixelSize: 23
-                            color: text
+                            // color: text
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
@@ -259,6 +259,14 @@ ApplicationWindow {
                             }
                         }
                     }
+                    Component.onCompleted: {
+                        console.log("Theme.bg =", Theme.bg)
+                        console.log("Theme.txtcolor =", Theme.txtcolor)
+                        console.log("Theme.smalltxt =", Theme.smalltxt)
+                        console.log("Theme.softgray =", Theme.softgray)
+                        console.log("Theme.colorBlue =", Theme.colorBlue)
+                    }
+
                 }
             }
 
