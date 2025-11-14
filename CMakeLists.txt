@@ -10,12 +10,6 @@ find_package(Qt6  REQUIRED COMPONENTS Quick Charts Sql Network)
 set(QML_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml")
 set(QML2_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml")
 
-
-
-# set_target_properties(MyApp PROPERTIES
-#     VS_DEBUGGER_ENVIRONMENT "QT_QPA_PLATFORM=xcb"
-# )
-# libuiohook
 add_subdirectory(vendor/libuiohook)
 set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleApplication")
 add_subdirectory(singleapplication)
