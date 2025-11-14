@@ -27,6 +27,8 @@
 #include <QCryptographicHash>
 #include <QRandomGenerator>
 #include <QTimer>
+#include <QStandardPaths>
+#include <QDir>
 
 extern ScreenshotManager* screenshotManager;
 // ---------- static state (counters, key set) ----------
@@ -230,11 +232,6 @@ void Tracker::captureAndSend() {
 static const QString DB_CONN_NAME = QStringLiteral("tracker_connection");
 static const QString DB_FILENAME = QStringLiteral("tracker_local.db");
 
-// void Tracker::setCurrentUser(const QString &userId) {
-//     m_currentUser = userId;
-// }
-
-
 void Tracker::setCurrentUser(const QString &userId) {
     m_currentUser = userId;
     qDebug() << "Current user set to:" << m_currentUser;
@@ -256,16 +253,35 @@ void Tracker::setCurrentUser(const QString &userId) {
 
 void Tracker::initLocalDatabase() {
     // Avoid duplicate connections
+    // if (QSqlDatabase::contains("tracker_connection")) {
+    //     m_db = QSqlDatabase::database("tracker_connection");
+    // } else {
+    //     m_db = QSqlDatabase::addDatabase("QSQLITE", "tracker_connection");
+    //     m_db.setDatabaseName("tracker.db");
+    // }
+    // if (!m_db.open()) {
+    //     qWarning() << "[DB] Failed to open database:" << m_db.lastError();
+    //     return;
+    // }
+
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dir);
+
+    QString dbPath = dir + "/tracker.db";
+    qDebug() << "[DB] Using DB at:" << dbPath;
+
     if (QSqlDatabase::contains("tracker_connection")) {
         m_db = QSqlDatabase::database("tracker_connection");
     } else {
         m_db = QSqlDatabase::addDatabase("QSQLITE", "tracker_connection");
-        m_db.setDatabaseName("tracker.db");
+        m_db.setDatabaseName(dbPath);
     }
+
     if (!m_db.open()) {
         qWarning() << "[DB] Failed to open database:" << m_db.lastError();
         return;
     }
+
     QSqlQuery query(m_db);
 
     QSqlQuery check(m_db);
