@@ -16,50 +16,20 @@ DatabaseHelper::DatabaseHelper(QObject *parent)
 
 bool DatabaseHelper::openDatabase()
 {
-    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(dir);
-
-    QString dbPath = dir + "/settings.db";
-    qDebug() << "[DB] Using Settings DB at:" << dbPath;
-
     if (QSqlDatabase::contains("settings_connection")) {
         db = QSqlDatabase::database("settings_connection");
     } else {
         db = QSqlDatabase::addDatabase("QSQLITE", "settings_connection");
-        db.setDatabaseName(dbPath);
+        db.setDatabaseName("settings.db"); // local file
     }
 
     if (!db.open()) {
         qWarning() << "Cannot open SQLite database:" << db.lastError().text();
         return false;
     }
-
     return true;
 }
 
-// bool DatabaseHelper::openDatabase()
-// {
-//     if (QSqlDatabase::contains("settings_connection")) {
-//         db = QSqlDatabase::database("settings_connection");
-//     } else {
-//         db = QSqlDatabase::addDatabase("QSQLITE", "settings_connection");
-//         // db.setDatabaseName("settings.db"); // local file
-//         QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-//         QDir().mkpath(dir);
-
-//         QString dbPath = dir + "/settings.db";
-//         qDebug() << "[DB] Using Settings DB at:" << dbPath;
-
-//         db.setDatabaseName(dbPath);
-
-//     }
-
-//     if (!db.open()) {
-//         qWarning() << "Cannot open SQLite database:" << db.lastError().text();
-//         return false;
-//     }
-//     return true;
-// }
 
 void DatabaseHelper::createSettingsTable()
 {
