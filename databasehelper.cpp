@@ -1,6 +1,5 @@
 
 #include "databasehelper.h"
-
 #include <QStandardPaths>
 #include <QDir>
 
@@ -12,21 +11,44 @@ DatabaseHelper::DatabaseHelper(QObject *parent)
     createTimerTable(); // create timer table at startup
 }
 
+// bool DatabaseHelper::openDatabase()
+// {
+//     if (QSqlDatabase::contains("settings_connection")) {
+//         db = QSqlDatabase::database("settings_connection");
+//     } else {
+//         db = QSqlDatabase::addDatabase("QSQLITE", "settings_connection");
+//         db.setDatabaseName("settings.db"); // local file
+//     }
+
+//     if (!db.open()) {
+//         qWarning() << "Cannot open SQLite database:" << db.lastError().text();
+//         return false;
+//     }
+//     return true;
+// }
+
+
 
 
 bool DatabaseHelper::openDatabase()
 {
+    QString basePath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(basePath);  // Ensure directory exists
+
+    QString dbPath = basePath + "/settings.db";
+
     if (QSqlDatabase::contains("settings_connection")) {
         db = QSqlDatabase::database("settings_connection");
     } else {
         db = QSqlDatabase::addDatabase("QSQLITE", "settings_connection");
-        db.setDatabaseName("settings.db"); // local file
+        db.setDatabaseName(dbPath);
     }
 
     if (!db.open()) {
         qWarning() << "Cannot open SQLite database:" << db.lastError().text();
         return false;
     }
+
     return true;
 }
 
