@@ -271,6 +271,8 @@ void Tracker::initLocalDatabase() {
     QDir().mkpath(basePath);
 
     QString dbPath = basePath + "/tracker.db";
+    qDebug() << "Settings DB Path:" << dbPath;
+
 
     if (QSqlDatabase::contains("tracker_connection")) {
         m_db = QSqlDatabase::database("tracker_connection");

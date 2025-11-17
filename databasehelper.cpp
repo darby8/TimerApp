@@ -36,6 +36,7 @@ bool DatabaseHelper::openDatabase()
     QDir().mkpath(basePath);  // Ensure directory exists
 
     QString dbPath = basePath + "/settings.db";
+    qDebug() << "Tracker DB Path:" << dbPath;
 
     if (QSqlDatabase::contains("settings_connection")) {
         db = QSqlDatabase::database("settings_connection");

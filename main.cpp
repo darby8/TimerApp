@@ -19,6 +19,9 @@ int main(int argc, char *argv[])
 {
     // QApplication app(argc, argv);
     SingleApplication app(argc, argv);
+    QCoreApplication::setOrganizationName("Reak");
+    QCoreApplication::setApplicationName("Overwatch");
+
     app.setApplicationName("Productivity Tracker");
     app.setWindowIcon(QIcon("qrc:/image.png"));
 
