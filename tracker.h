@@ -32,7 +32,7 @@ public:
     QString appIcon() const { return m_appIcon; }
     QString getAccessToken();
     QString lastCaptureTime() const { return m_lastCaptureTime; }
-     void setCurrentUser(const QString &userId);
+    void setCurrentUser(const QString &userId);
     void initLocalDatabase();
     void syncPendingEvents();
     void saveEventToLocalDb(const QJsonObject &event);

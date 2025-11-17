@@ -246,8 +246,6 @@ void Tracker::setCurrentUser(const QString &userId) {
         screenshotManager->setLastScreenshotPath(QUrl::fromLocalFile(lastPath).toString());
          qDebug() << "[Tracker] Setting last screenshot path:" << QUrl::fromLocalFile(lastPath).toString();
     }
-
-
 }
 
 
