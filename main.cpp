@@ -14,6 +14,7 @@ ScreenshotManager* screenshotManager = nullptr;
 
 // Global Tracker instance
 Tracker tracker;
+DatabaseHelper dbHelper;
 
 int main(int argc, char *argv[])
 {
@@ -22,12 +23,12 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("Reak");
     QCoreApplication::setApplicationName("Overwatch");
 
-    app.setApplicationName("Productivity Tracker");
+    // app.setApplicationName("Productivity Tracker");
     app.setWindowIcon(QIcon("qrc:/image.png"));
 
 
 
-    DatabaseHelper dbHelper;
+    // DatabaseHelper dbHelper;
     TimerManager timerManager(&dbHelper);
     timerManager.loadSavedTime();
 
