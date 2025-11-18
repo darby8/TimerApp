@@ -29,7 +29,7 @@
 #include <QTimer>
 #include <QStandardPaths>
 #include <QDir>
-Tracker tracker;
+// Tracker tracker;
 extern ScreenshotManager* screenshotManager;
 // ---------- static state (counters, key set) ----------
 static QString accessToken;
@@ -714,9 +714,9 @@ void Tracker::fetchData(const QString &token)
                 qDebug() << "[FS] Setting app name to:" << appName << "and icon to:" << iconPath;
 
                 // Update app name
-                QCoreApplication::setApplicationName(appName);
-                m_appName = appName;
-                emit appNameChanged(m_appName);
+                // QCoreApplication::setApplicationName(appName);
+                // m_appName = appName;
+                // emit appNameChanged(m_appName);
 
                 // Handle icon (cache + download)
                 QString localIconPath = getCachedIconPath(iconPath);

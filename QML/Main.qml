@@ -150,7 +150,7 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: tracker.appName
+                            text: "Project overwatch" //tracker.appName
                             font.bold: true
                             font.pixelSize: 23
                             color: Theme.text

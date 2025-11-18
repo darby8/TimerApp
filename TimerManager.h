@@ -4,14 +4,14 @@
 #include <QTimer>
 #include "databasehelper.h"
 #include <QTimer>
-
+class Tracker;
 class TimerManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(int seconds READ seconds NOTIFY secondsChanged)
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
 
 public:
-    explicit TimerManager(DatabaseHelper* dbHelper, QObject* parent = nullptr);
+    explicit TimerManager(DatabaseHelper* dbHelper, Tracker* tracker, QObject* parent = nullptr);
 
     int seconds() const;
     bool isRunning() const;
@@ -38,7 +38,7 @@ private:
     QTimer syncTimer;
     DatabaseHelper* m_dbHelper;
     QString m_currentUser;
-
+    Tracker* m_tracker;
     QTimer m_aiTimer;     // new (AI sync)
     int m_aiSyncPeriod = 0;
 

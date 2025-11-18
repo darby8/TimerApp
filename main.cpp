@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
     Tracker tracker;
     DatabaseHelper dbHelper;
     // DatabaseHelper dbHelper;
-    TimerManager timerManager(&dbHelper);
+
+    TimerManager timerManager(&dbHelper ,  &tracker);
     timerManager.loadSavedTime();
 
     // --- Create ScreenshotManager ---

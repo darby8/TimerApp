@@ -3,14 +3,31 @@
 #include "tracker.h"
 #include <QTimer>
 
-extern Tracker tracker; // global tracker
+// Tracker* m_tracker;
 
-TimerManager::TimerManager(DatabaseHelper* dbHelper, QObject* parent)
-    : QObject(parent), m_seconds(0), m_running(false), m_dbHelper(dbHelper)
+
+// TimerManager::TimerManager(DatabaseHelper* dbHelper, Tracker* tracker, QObject* parent)
+//     : QObject(parent), m_seconds(0), m_running(false), m_dbHelper(dbHelper)
+// {
+//     m_timer.setInterval(1000);
+//     connect(&m_timer, &QTimer::timeout, this, &TimerManager::onTimeout);
+// }
+
+TimerManager::TimerManager(DatabaseHelper* dbHelper, Tracker* tracker, QObject* parent)
+    : QObject(parent),
+    m_seconds(0),
+    m_running(false),
+    m_dbHelper(dbHelper),
+    m_tracker(tracker)     // <-- FIXED
 {
     m_timer.setInterval(1000);
     connect(&m_timer, &QTimer::timeout, this, &TimerManager::onTimeout);
+
+    // Initialize AI timer
+    m_aiTimer.setInterval(60000);
 }
+
+
 
 int TimerManager::seconds() const { return m_seconds; }
 bool TimerManager::isRunning() const { return m_running; }
@@ -33,7 +50,7 @@ void TimerManager::stop() {
         m_running = false;
         emit runningChanged();
 
-        tracker.stop();
+        m_tracker->stop();
 
         if (m_dbHelper)
             m_dbHelper->saveTimerSeconds(m_currentUser, m_seconds);
@@ -55,13 +72,13 @@ void TimerManager::start() {
             m_aiTimer.start();
         }
 
-        tracker.start();
+        m_tracker->start();
     }
 }
 
 void TimerManager::setCurrentUser(const QString &userId) {
     m_currentUser = userId;
-    tracker.setCurrentUser(userId);
+    m_tracker->setCurrentUser(userId);
     qDebug() << "Current user set to:" << m_currentUser;
 }
 
