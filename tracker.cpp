@@ -29,7 +29,7 @@
 #include <QTimer>
 #include <QStandardPaths>
 #include <QDir>
-
+Tracker tracker;
 extern ScreenshotManager* screenshotManager;
 // ---------- static state (counters, key set) ----------
 static QString accessToken;
@@ -246,6 +246,13 @@ void Tracker::setCurrentUser(const QString &userId) {
         screenshotManager->setLastScreenshotPath(QUrl::fromLocalFile(lastPath).toString());
          qDebug() << "[Tracker] Setting last screenshot path:" << QUrl::fromLocalFile(lastPath).toString();
     }
+
+
+    qDebug() << "Current user set to:" << m_currentUser;
+    qDebug() << "Last screenshot path loaded:" << lastPath;
+
+
+
 }
 
 
