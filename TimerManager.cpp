@@ -24,7 +24,7 @@ TimerManager::TimerManager(DatabaseHelper* dbHelper, Tracker* tracker, QObject* 
     connect(&m_timer, &QTimer::timeout, this, &TimerManager::onTimeout);
 
     // Initialize AI timer
-    m_aiTimer.setInterval(60000);
+    // m_aiTimer.setInterval(60000);
 }
 
 

@@ -813,6 +813,26 @@ void Tracker::setSyncPeriod(int milliseconds)
 
 
 
+// QString Tracker::getCachedIconPath(const QString &url)
+// {
+//     QByteArray hash = QCryptographicHash::hash(url.toUtf8(), QCryptographicHash::Md5);
+//     QString fileName = QString(hash.toHex());
+
+//     // Detect extension from URL
+//     QString extension = "svg";  // fallback
+//     int lastDot = url.lastIndexOf('.');
+//     if (lastDot != -1 && lastDot < url.length() - 1) {
+//         extension = url.mid(lastDot + 1);  // e.g., "png", "ico", "jpg"
+//     }
+
+//     QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+//     QDir dir(cacheDir);
+//     if (!dir.exists())
+//         dir.mkpath(cacheDir);
+
+//     return cacheDir + "/" + fileName + "." + extension;
+// }
+
 QString Tracker::getCachedIconPath(const QString &url)
 {
     QByteArray hash = QCryptographicHash::hash(url.toUtf8(), QCryptographicHash::Md5);
@@ -825,13 +845,15 @@ QString Tracker::getCachedIconPath(const QString &url)
         extension = url.mid(lastDot + 1);  // e.g., "png", "ico", "jpg"
     }
 
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    // 🔥 CHANGE THIS LINE
+    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    // 🔥 NOW ICONS WILL SAVE INSIDE ROAMING FOLDER
+
     QDir dir(cacheDir);
     if (!dir.exists())
         dir.mkpath(cacheDir);
 
     return cacheDir + "/" + fileName + "." + extension;
 }
-
 
 
