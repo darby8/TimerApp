@@ -76,9 +76,7 @@ jobs:
           echo "PFX restored at $pfxPath"
 
 
-      # -------------------------------------------------------------
-      # SIGN MAIN APPLICATION EXE (appproject-overwatch.exe)
-      # -------------------------------------------------------------
+
       - name: Sign Application EXE
         shell: pwsh
         env:
