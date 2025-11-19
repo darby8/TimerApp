@@ -76,14 +76,14 @@ jobs:
       # Restore Base64 PFX certificate
       # ------------------------------------------------------------
       - name: Restore PFX certificate
-        shell: powershell
+        shell: pwsh
         run: |
           $base64 = '${{ secrets.WINDOWS_CERT_PFX }}'
           $bytes = [Convert]::FromBase64String($base64)
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, $bytes)
-          echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
-          Write-Host "✔ PFX restored to: $pfxPath"
+          Write-Host "PFX restored to: $pfxPath"
+
 
       # ------------------------------------------------------------
       # Locate signtool.exe dynamically
