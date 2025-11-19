@@ -59,7 +59,7 @@ SectionEnd
 # Checkbox: Add Auto-start on Boot
 # --------------------------
 Function AutoStartCheckboxSelected
-    ${If} ${ReadINI} "$PLUGINSDIR\mui.ini" "Field 2" "State" $0
+    ${If} ${ReadINI} "$PLUGINSDIR\mui.ini" "Field 3" "State" $0
         ${If} $0 == 1
             WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}" "$INSTDIR\appproject-overwatch.exe"
         ${EndIf}
