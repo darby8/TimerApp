@@ -65,15 +65,14 @@ jobs:
 
 
       - name: Restore PFX certificate
-        shell: pwsh
-        env:
-          PFX_B64: ${{ secrets.CODESIGN_PFX }}
+        shell: powershell
         run: |
+          $base64 = '${{ secrets.WINDOWS_CERT_PFX }}'
+          $bytes = [Convert]::FromBase64String($base64)
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-          $PFX_B64 | Out-File "$pfxPath.b64"
-          certutil -decode "$pfxPath.b64" $pfxPath
-          Remove-Item "$pfxPath.b64"
-          echo "PFX restored at $pfxPath"
+          [IO.File]::WriteAllBytes($pfxPath, $bytes)
+          Write-Host "PFX restored at $pfxPath"
+
 
 
 
