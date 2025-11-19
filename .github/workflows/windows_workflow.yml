@@ -37,6 +37,9 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
 
+      # ------------------------------------------------------------
+      # Configure CMake
+      # ------------------------------------------------------------
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -45,10 +48,16 @@ jobs:
             -A x64 `
             -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
 
+      # ------------------------------------------------------------
+      # Build project
+      # ------------------------------------------------------------
       - name: Build project (Release)
         shell: pwsh
         run: cmake --build $env:BUILD_DIR --config Release
 
+      # ------------------------------------------------------------
+      # Deploy Qt
+      # ------------------------------------------------------------
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
@@ -63,7 +72,9 @@ jobs:
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
-
+      # ------------------------------------------------------------
+      # Restore Base64 PFX certificate
+      # ------------------------------------------------------------
       - name: Restore PFX certificate
         shell: powershell
         run: |
@@ -71,43 +82,72 @@ jobs:
           $bytes = [Convert]::FromBase64String($base64)
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, $bytes)
-          Write-Host "PFX restored at $pfxPath"
+          echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
+          Write-Host "✔ PFX restored to: $pfxPath"
 
+      # ------------------------------------------------------------
+      # Locate signtool.exe dynamically
+      # ------------------------------------------------------------
+      - name: Find signtool
+        id: signtool
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter signtool.exe |
+                      Sort-Object FullName |
+                      Select-Object -First 1
 
+          if (-not $signtool) {
+            Write-Error "❌ signtool.exe not found!"
+            exit 1
+          }
 
+          echo "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+          Write-Host "✔ signtool found at: $($signtool.FullName)"
 
+      # ------------------------------------------------------------
+      # Sign the APPLICATION EXE
+      # ------------------------------------------------------------
       - name: Sign Application EXE
         shell: pwsh
         env:
           PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
         run: |
-          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           $exe = "$env:BUILD_DIR\Release\$env:APP_NAME"
 
-          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
-          if (-Not (Test-Path $signtool)) {
-            $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          if (!(Test-Path $exe)) {
+            Write-Error "❌ Application EXE not found!"
+            exit 1
           }
 
-          & $signtool sign `
-            /f $pfxPath `
-            /p $env:PFX_PASSWORD `
-            /fd SHA256 `
+          & $env:SIGNTOOL sign `
+            /f "$env:PFX_PATH" `
+            /p "$env:PFX_PASSWORD" `
+            /fd sha256 `
             /tr http://timestamp.digicert.com `
-            /td SHA256 `
-            /v $exe
+            /td sha256 `
+            "$exe"
 
+          Write-Host "✔ Application signed successfully!"
 
+      # ------------------------------------------------------------
+      # Prepare NSIS installer input directory
+      # ------------------------------------------------------------
       - name: Create installer source folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "${{ env.INSTALLER_SRC }}" | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
 
+      # ------------------------------------------------------------
+      # Install NSIS
+      # ------------------------------------------------------------
       - name: Install NSIS
         shell: cmd
         run: choco install nsis -y
 
+      # ------------------------------------------------------------
+      # Build NSIS installer
+      # ------------------------------------------------------------
       - name: Build NSIS installer
         shell: pwsh
         run: |
@@ -115,32 +155,34 @@ jobs:
           & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
           cd ..
 
-
-      # -------------------------------------------------------------
-      # SIGN THE NSIS INSTALLER EXE
-      # -------------------------------------------------------------
+      # ------------------------------------------------------------
+      # SIGN THE NSIS INSTALLER
+      # ------------------------------------------------------------
       - name: Sign Windows Installer
         shell: pwsh
         env:
           PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
         run: |
-          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           $installer = "installer\\Overwatch-Setup.exe"
 
-          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
-          if (-Not (Test-Path $signtool)) {
-            $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          if (!(Test-Path $installer)) {
+            Write-Error "❌ Installer EXE missing!"
+            exit 1
           }
 
-          & $signtool sign `
-            /f $pfxPath `
-            /p $env:PFX_PASSWORD `
-            /fd SHA256 `
+          & $env:SIGNTOOL sign `
+            /f "$env:PFX_PATH" `
+            /p "$env:PFX_PASSWORD" `
+            /fd sha256 `
             /tr http://timestamp.digicert.com `
-            /td SHA256 `
-            /v $installer
+            /td sha256 `
+            "$installer"
 
+          Write-Host "✔ Installer signed successfully!"
 
+      # ------------------------------------------------------------
+      # Upload installer artifact
+      # ------------------------------------------------------------
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
