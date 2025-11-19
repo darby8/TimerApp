@@ -69,6 +69,49 @@ jobs:
         shell: pwsh
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
+          
+          
+         
+      - name: Decode PFX certificate
+        shell: pwsh
+        run: |
+          $bytes = [System.Convert]::FromBase64String("${{ secrets.PFX_BASE64 }}")
+          [IO.File]::WriteAllBytes("signing.pfx", $bytes)
+
+      # ⭐ Install certificate into local machine store
+      - name: Install Code-Signing Certificate
+        shell: pwsh
+        run: |
+          certutil -f -p "${{ secrets.PFX_PASSWORD }}" -importpfx signing.pfx NoRoot
+
+          
+      - name: Sign EXE
+        shell: pwsh
+        run: |
+          $exePath = "$env:BUILD_DIR\Release\$env:APP_NAME"
+          & "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" sign `
+            /f signing.pfx `
+            /p "${{ secrets.PFX_PASSWORD }}" `
+            /tr http://timestamp.digicert.com `
+            /td sha256 `
+            /fd sha256 `
+            $exePath
+
+
+
+      - name: Sign Installer EXE
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "installer\*.exe" | Select-Object -First 1
+          & "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" sign `
+            /f signing.pfx `
+            /p "${{ secrets.PFX_PASSWORD }}" `
+            /tr http://timestamp.digicert.com `
+            /td sha256 `
+            /fd sha256 `
+            $installer.FullName
+
+          
 
       # ✅ Prepare installer source folder
       - name: Create installer source folder
