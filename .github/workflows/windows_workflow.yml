@@ -146,9 +146,6 @@ jobs:
             Write-Host "✔ SignTool succeeded"
           }
 
-      # ------------------------------------------------------------
-      # Prepare NSIS installer input directory
-      # ------------------------------------------------------------
       - name: Create installer source folder
         shell: pwsh
         run: |
