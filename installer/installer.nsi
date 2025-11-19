@@ -25,6 +25,9 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
   CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 
+  # 🔥 ADD: Run application on startup
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}" '"$INSTDIR\appproject-overwatch.exe"'
+
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
@@ -38,6 +41,9 @@ Section "Uninstall"
   Delete "$DESKTOP\${APPNAME}.lnk"
   Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
   RMDir "$SMPROGRAMS\${APPNAME}"
+
+  # 🔥 REMOVE: Startup entry on uninstall
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}"
 
   RMDir /r "$INSTDIR"
 
