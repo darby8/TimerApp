@@ -22,11 +22,12 @@ Page Directory
 Page InstFiles
 !insertmacro MUI_PAGE_FINISH
 
-# ⭐ Finish Page Checkboxes
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "Start Overwatch on Windows startup"
+# ⭐ FINISH PAGE CHECKBOX (Autostart)
 !define MUI_FINISHPAGE_SHOWREADME
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "Start Overwatch on Windows startup"
 !define MUI_FINISHPAGE_SHOWREADME_FUNCTION AutoStartCheckboxSelected
 
+# ⭐ FINISH PAGE CHECKBOX (Run Now)
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Launch Overwatch now"
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchAppNow
@@ -35,18 +36,19 @@ Page InstFiles
 # Install Section
 # --------------------------
 Section "Install"
+
   SetOutPath "$INSTDIR"
   File /r "input\*.*"
 
-  # Start Menu / Desktop Shortcuts
+  ; Shortcuts
   CreateDirectory "$SMPROGRAMS\${APPNAME}"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
   CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 
-  # Uninstaller
+  ; Uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-  # Control Panel Uninstall Info
+  ; Uninstall info
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "${COMPANY}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "${VERSION}"
@@ -56,13 +58,14 @@ Section "Install"
 SectionEnd
 
 # --------------------------
-# Checkbox: Add Auto-start on Boot
+# Checkbox: Auto-start On Windows Boot
 # --------------------------
 Function AutoStartCheckboxSelected
-    ${If} ${ReadINI} "$PLUGINSDIR\mui.ini" "Field 3" "State" $0
-        ${If} $0 == 1
-            WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}" "$INSTDIR\appproject-overwatch.exe"
-        ${EndIf}
+    ; MUI stores this checkbox in $mui.FinishPage.ReadmeCheck
+    ${NSD_GetState} $mui.FinishPage.ReadmeCheck $0
+
+    ${If} $0 == ${BST_CHECKED}
+        WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}" "$INSTDIR\appproject-overwatch.exe"
     ${EndIf}
 FunctionEnd
 
@@ -70,22 +73,29 @@ FunctionEnd
 # Checkbox: Launch App After Install
 # --------------------------
 Function LaunchAppNow
-    Exec "$INSTDIR\appproject-overwatch.exe"
+    ; Run now checkbox is stored in $mui.FinishPage.RunCheck
+    ${NSD_GetState} $mui.FinishPage.RunCheck $0
+
+    ${If} $0 == ${BST_CHECKED}
+        Exec "$INSTDIR\appproject-overwatch.exe"
+    ${EndIf}
 FunctionEnd
 
 # --------------------------
 # Uninstall Section
 # --------------------------
 Section "Uninstall"
+
   Delete "$DESKTOP\${APPNAME}.lnk"
   Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
   RMDir  "$SMPROGRAMS\${APPNAME}"
 
-  # Remove autostart if created
+  ; Remove autostart
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}"
 
   RMDir /r "$INSTDIR"
 
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
+
 SectionEnd
 
