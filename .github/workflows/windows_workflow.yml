@@ -17,17 +17,20 @@ jobs:
       INSTALLER_SCRIPT: installer/installer.nsi
 
     steps:
+      # ✅ Checkout repo (with submodules)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # ✅ Install Python and aqtinstall
       - name: Install Python + aqt
         shell: cmd
         run: |
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
+      # ✅ Install Qt version 6.5.3 (MSVC2019)
       - name: Install Qt 6.5.3 (MSVC2019)
         shell: pwsh
         run: |
@@ -37,6 +40,7 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
 
+      # ✅ Configure CMake
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -45,10 +49,12 @@ jobs:
             -A x64 `
             -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
 
+      # ✅ Build (Release)
       - name: Build project (Release)
         shell: pwsh
         run: cmake --build $env:BUILD_DIR --config Release
 
+      # ✅ Deploy Qt dependencies (windeployqt)
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
@@ -58,68 +64,24 @@ jobs:
             --release `
             --qmldir "$env:GITHUB_WORKSPACE\QML"
 
+      # ✅ Copy QML folder
       - name: Copy QML resources
         shell: pwsh
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
-      # --------------------------
-      # Prepare installer input
-      # --------------------------
+      # ✅ Prepare installer source folder
       - name: Create installer source folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "${{ env.INSTALLER_SRC }}" | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
 
-      # --------------------------
-      # Decode PFX (from secrets)
-      # --------------------------
-      - name: Decode PFX certificate (from PFX_BASE64)
-        shell: pwsh
-        env:
-          PFX_BASE64: ${{ secrets.PFX_BASE64 }}
-        run: |
-          if (-not $env:PFX_BASE64) { Write-Error "PFX_BASE64 secret not defined"; exit 1 }
-          $bytes = [System.Convert]::FromBase64String($env:PFX_BASE64)
-          [IO.File]::WriteAllBytes("signing.pfx", $bytes)
-          Write-Host "Wrote signing.pfx (size $((Get-Item signing.pfx).Length) bytes)"
-
-      # --------------------------
-      # Sign built EXE (app). This signs the binary included in installer/input too.
-      # --------------------------
-      - name: Find signtool.exe
-        shell: pwsh
-        id: find-signtool
-        run: |
-          $tool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\*" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $tool) { $tool = Get-Command signtool.exe -ErrorAction SilentlyContinue }
-          if (-not $tool) { Write-Error "signtool.exe not found on runner"; exit 1 }
-          $path = if ($tool -is [System.IO.FileInfo]) { $tool.FullName } else { $tool.Source }
-          Write-Host "::set-output name=path::$path"
-
-      - name: Sign EXE (app)
-        shell: pwsh
-        env:
-          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
-        run: |
-          $signtool = "${{ steps.find-signtool.outputs.path }}"
-          if (-not (Test-Path $signtool)) { Write-Error "signtool not found at $signtool"; exit 1 }
-          $exePath = "$env:BUILD_DIR\Release\$env:APP_NAME"
-          if (-not (Test-Path $exePath)) { Write-Error "EXE not found: $exePath"; exit 1 }
-          & $signtool sign /f signing.pfx /p "$env:PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td sha256 /fd sha256 $exePath
-          Write-Host "Signed $exePath"
-
-      # --------------------------
-      # Install NSIS (for building installer)
-      # --------------------------
+      # ✅ Install NSIS (for building installer)
       - name: Install NSIS
         shell: cmd
         run: choco install nsis -y
 
-      # --------------------------
-      # Build NSIS installer
-      # --------------------------
       - name: Build NSIS installer
         shell: pwsh
         run: |
@@ -127,45 +89,11 @@ jobs:
           & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
           cd ..
 
-      # --------------------------
-      # Sign the installer executable and any Uninstall.exe found under installer/
-      # --------------------------
-      - name: Sign Installer and Uninstall (if found)
-        shell: pwsh
-        env:
-          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
-        run: |
-          $signtool = "${{ steps.find-signtool.outputs.path }}"
-          if (-not (Test-Path $signtool)) { Write-Error "signtool not found at $signtool"; exit 1 }
-
-          # Sign installer(s)
-          $installers = Get-ChildItem -Path installer -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue
-          if ($installers) {
-            foreach ($inst in $installers) {
-              Write-Host "Signing installer: $($inst.FullName)"
-              & $signtool sign /f signing.pfx /p "$env:PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td sha256 /fd sha256 $inst.FullName
-            }
-          } else {
-            Write-Host "No installer exe found under installer/ to sign."
-          }
-
-          # Sign Uninstall.exe if any found (some build setups might produce a Uninstall.exe file)
-          $uninsts = Get-ChildItem -Path installer -Filter "Uninstall.exe" -Recurse -ErrorAction SilentlyContinue
-          if ($uninsts) {
-            foreach ($u in $uninsts) {
-              Write-Host "Signing Uninstall: $($u.FullName)"
-              & $signtool sign /f signing.pfx /p "$env:PFX_PASSWORD" /tr "http://timestamp.digicert.com" /td sha256 /fd sha256 $u.FullName
-            }
-          } else {
-            Write-Host "No Uninstall.exe found under installer/ to sign."
-          }
-
-      # --------------------------
-      # Upload final installer artifact
-      # --------------------------
+      # ✅ Upload final installer artifact
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Installer
           path: installer\*.exe
+
 
