@@ -89,8 +89,8 @@ jobs:
         shell: pwsh
         run: |
           $b64 = @"
-${{ secrets.WINDOWS_CERT_PFX }}
-"@
+          ${{ secrets.WINDOWS_CERT_PFX }}
+          "@
 
           $bytes = [System.Convert]::FromBase64String($b64.Trim())
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
