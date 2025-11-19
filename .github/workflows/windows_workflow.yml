@@ -64,9 +64,6 @@ jobs:
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
 
-      # -------------------------------------------------------------
-      #  RESTORE CERTIFICATE (for signing EXE + installer)
-      # -------------------------------------------------------------
       - name: Restore PFX certificate
         shell: pwsh
         env:
