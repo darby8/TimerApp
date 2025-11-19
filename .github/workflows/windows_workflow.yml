@@ -17,20 +17,17 @@ jobs:
       INSTALLER_SCRIPT: installer/installer.nsi
 
     steps:
-      # ✅ Checkout repo (with submodules)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # ✅ Install Python and aqtinstall
       - name: Install Python + aqt
         shell: cmd
         run: |
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
 
-      # ✅ Install Qt version 6.5.3 (MSVC2019)
       - name: Install Qt 6.5.3 (MSVC2019)
         shell: pwsh
         run: |
@@ -40,7 +37,6 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
 
-      # ✅ Configure CMake
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -49,12 +45,10 @@ jobs:
             -A x64 `
             -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
 
-      # ✅ Build (Release)
       - name: Build project (Release)
         shell: pwsh
         run: cmake --build $env:BUILD_DIR --config Release
 
-      # ✅ Deploy Qt dependencies (windeployqt)
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
@@ -64,20 +58,58 @@ jobs:
             --release `
             --qmldir "$env:GITHUB_WORKSPACE\QML"
 
-      # ✅ Copy QML folder
-      - name: Copy QML resources
+      - name: Copy QML folder
         shell: pwsh
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
-      # ✅ Prepare installer source folder
+
+      # -------------------------------------------------------------
+      #  RESTORE CERTIFICATE (for signing EXE + installer)
+      # -------------------------------------------------------------
+      - name: Restore PFX certificate
+        shell: pwsh
+        env:
+          PFX_B64: ${{ secrets.CODESIGN_PFX }}
+        run: |
+          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+          $PFX_B64 | Out-File "$pfxPath.b64"
+          certutil -decode "$pfxPath.b64" $pfxPath
+          Remove-Item "$pfxPath.b64"
+          echo "PFX restored at $pfxPath"
+
+
+      # -------------------------------------------------------------
+      # SIGN MAIN APPLICATION EXE (appproject-overwatch.exe)
+      # -------------------------------------------------------------
+      - name: Sign Application EXE
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+        run: |
+          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+          $exe = "$env:BUILD_DIR\Release\$env:APP_NAME"
+
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
+          if (-Not (Test-Path $signtool)) {
+            $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          }
+
+          & $signtool sign `
+            /f $pfxPath `
+            /p $env:PFX_PASSWORD `
+            /fd SHA256 `
+            /tr http://timestamp.digicert.com `
+            /td SHA256 `
+            /v $exe
+
+
       - name: Create installer source folder
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "${{ env.INSTALLER_SRC }}" | Out-Null
           Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
 
-      # ✅ Install NSIS (for building installer)
       - name: Install NSIS
         shell: cmd
         run: choco install nsis -y
@@ -89,11 +121,35 @@ jobs:
           & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
           cd ..
 
-      # ✅ Upload final installer artifact
+
+      # -------------------------------------------------------------
+      # SIGN THE NSIS INSTALLER EXE
+      # -------------------------------------------------------------
+      - name: Sign Windows Installer
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+        run: |
+          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+          $installer = "installer\\Overwatch-Setup.exe"
+
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
+          if (-Not (Test-Path $signtool)) {
+            $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          }
+
+          & $signtool sign `
+            /f $pfxPath `
+            /p $env:PFX_PASSWORD `
+            /fd SHA256 `
+            /tr http://timestamp.digicert.com `
+            /td SHA256 `
+            /v $installer
+
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Installer
           path: installer\*.exe
-
 
