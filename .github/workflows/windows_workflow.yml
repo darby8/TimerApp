@@ -78,11 +78,16 @@ jobs:
       - name: Restore PFX certificate
         shell: pwsh
         run: |
-          $base64 = '${{ secrets.WINDOWS_CERT_PFX }}'
-          $bytes = [Convert]::FromBase64String($base64)
+          $b64 = @"
+      ${{ secrets.WINDOWS_CERT_PFX }}
+      "@
+
+          $bytes = [System.Convert]::FromBase64String($b64.Trim())
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
-          [IO.File]::WriteAllBytes($pfxPath, $bytes)
-          Write-Host "PFX restored to: $pfxPath"
+          [System.IO.File]::WriteAllBytes($pfxPath, $bytes)
+
+
+
 
 
       # ------------------------------------------------------------
@@ -112,22 +117,32 @@ jobs:
         env:
           PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
         run: |
+          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           $exe = "$env:BUILD_DIR\Release\$env:APP_NAME"
 
-          if (!(Test-Path $exe)) {
-            Write-Error "❌ Application EXE not found!"
-            exit 1
+          Write-Host "Signing file: $exe"
+          Write-Host "Using certificate: $pfxPath"
+
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          if (-Not (Test-Path $signtool)) {
+            $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
           }
 
-          & $env:SIGNTOOL sign `
-            /f "$env:PFX_PATH" `
-            /p "$env:PFX_PASSWORD" `
-            /fd sha256 `
+          & $signtool sign `
+            /f $pfxPath `
+            /p $env:PFX_PASSWORD `
+            /fd SHA256 `
+            /td SHA256 `
             /tr http://timestamp.digicert.com `
-            /td sha256 `
-            "$exe"
+            /v $exe
 
-          Write-Host "✔ Application signed successfully!"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "❌ SignTool FAILED"
+            exit 1
+          } else {
+            Write-Host "✔ SignTool succeeded"
+          }
+
 
       # ------------------------------------------------------------
       # Prepare NSIS installer input directory
