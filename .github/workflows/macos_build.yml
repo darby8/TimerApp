@@ -1,4 +1,4 @@
-name: macOS Qt Build (project-overwatch)
+name: macOS Qt Build (TimerApp Auto-Start)
 
 on:
   push:
@@ -12,11 +12,13 @@ jobs:
     env:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
-      APP_NAME: appproject-overwatch
-      DMG_NAME: project-overwatch.dmg
+      APP_NAME: apptimer
+      DMG_NAME: timer-app.dmg
+      LAUNCHAGENT_PLIST: com.reak.timer.plist
+      POST_INSTALL_SCRIPT: post_install.sh
 
     steps:
-      # ✅ Checkout repository (with submodules)
+      # ✅ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -83,34 +85,87 @@ jobs:
       - name: Remove quarantine attributes
         run: xattr -cr "$APP_BUNDLE"
 
-      # ✅ Ad-hoc sign (required for running)
+      # ✅ Ad-hoc code sign
       - name: Ad-hoc code sign
         run: |
           codesign --deep --force --sign "-" "$APP_BUNDLE"
           echo "✅ Ad-hoc signed app bundle."
 
-      # ✅ Create drag-to-install DMG
-
-      - name: Create drag-and-drop DMG
+      # ✅ Create LaunchAgent plist for auto-start
+      - name: Create LaunchAgent plist
         run: |
-          APP_NAME=$(basename "$APP_BUNDLE" .app)
-          DMG_FILE="${{ env.DMG_NAME }}"
+          APP_EXEC="$APP_BUNDLE/Contents/MacOS/${{ env.APP_NAME }}"
+          cat <<EOF > $GITHUB_WORKSPACE/${{ env.LAUNCHAGENT_PLIST }}
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.reak.timer</string>
+              <key>ProgramArguments</key>
+              <array>
+                <string>${APP_EXEC}</string>
+              </array>
+              <key>RunAtLoad</key>
+              <true/>
+              <key>KeepAlive</key>
+              <true/>
+            </dict>
+          </plist>
+          EOF
+          echo "✅ Created LaunchAgent plist."
+
+      # ✅ Create post-install script
+      - name: Create post-install script
+        run: |
+          cat <<'EOS' > $GITHUB_WORKSPACE/${{ env.POST_INSTALL_SCRIPT }}
+          #!/bin/bash
+          APP_NAME="apptimer"
+          APP_PATH="/Applications/${APP_NAME}.app"
+          # Copy app to Applications
+          if [ ! -d "$APP_PATH" ]; then
+              cp -R "$PWD/$APP_NAME.app" /Applications/
+          fi
+          # Copy LaunchAgent plist
+          LAUNCHAGENT_DIR="$HOME/Library/LaunchAgents"
+          mkdir -p "$LAUNCHAGENT_DIR"
+          cp "$PWD/com.reak.timer.plist" "$LAUNCHAGENT_DIR/"
+          # Load LaunchAgent
+          launchctl unload "$LAUNCHAGENT_DIR/com.reak.timer.plist" 2>/dev/null
+          launchctl load "$LAUNCHAGENT_DIR/com.reak.timer.plist"
+          echo "✅ Installed and auto-start enabled."
+          EOS
+          chmod +x $GITHUB_WORKSPACE/${{ env.POST_INSTALL_SCRIPT }}
+          echo "✅ Post-install script created."
+
+      # ✅ Prepare DMG contents
+      - name: Prepare DMG contents
+        run: |
+          mkdir -p dmg_contents
+          cp -R "$APP_BUNDLE" dmg_contents/
+          cp $GITHUB_WORKSPACE/${{ env.LAUNCHAGENT_PLIST }} dmg_contents/
+          cp $GITHUB_WORKSPACE/${{ env.POST_INSTALL_SCRIPT }} dmg_contents/
+
+      # ✅ Create drag-and-drop DMG including post-install
+      - name: Create DMG
+        run: |
           create-dmg \
-            --volname "${APP_NAME}" \
+            --volname "TimerApp" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 120 \
-            --icon "${APP_NAME}.app" 150 200 \
+            --icon "apptimer.app" 150 200 \
             --app-drop-link 450 200 \
-            "$DMG_FILE" "$(dirname "$APP_BUNDLE")"
-          echo "✅ Created DMG: $DMG_FILE"
-          echo "DMG_FILE=$DMG_FILE" >> $GITHUB_ENV
+            ${{ env.DMG_NAME }} \
+            dmg_contents
+          echo "✅ DMG created with auto-start setup."
+          echo "DMG_FILE=${{ env.DMG_NAME }}" >> $GITHUB_ENV
 
-
-      # ✅ Upload artifact
+      # ✅ Upload DMG artifact
       - name: Upload macOS DMG Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-macOS
+          name: timer-app-macOS
           path: ${{ env.DMG_NAME }}
 
