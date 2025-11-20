@@ -155,7 +155,7 @@ jobs:
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 120 \
-            --icon "project-overwatch.app" 150 200 \
+            --icon "appproject-overwatch.app" 150 200 \
             --app-drop-link 450 200 \
             ${{ env.DMG_NAME }} \
             dmg_contents
