@@ -9,6 +9,7 @@
 #include "databasehelper.h"
 #include "singleapplication.h"
 #include "tracker.h"
+#include "qfile.h"
 // Global pointer for ScreenshotManager
 ScreenshotManager* screenshotManager = nullptr;
 
@@ -23,8 +24,9 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("Overwatch");
 
     // app.setApplicationName("Productivity Tracker");
-    app.setWindowIcon(QIcon("qrc:/image.png"));
-
+    app.setWindowIcon(QIcon(":/icons/app.ico"));
+    qDebug() << "Icon exists:" << QFile::exists(":image.png");
+    qDebug() << "Exists:" << QFile::exists(":image.png");
 
     Tracker tracker;
     DatabaseHelper dbHelper;

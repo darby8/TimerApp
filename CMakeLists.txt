@@ -21,6 +21,11 @@ qt_add_executable(appproject-overwatch
     screenshot.cpp
 )
 
+
+qt_add_resources(APP_RESOURCES resources.qrc)
+target_sources(appproject-overwatch PRIVATE ${APP_RESOURCES})
+
+
 qt_add_qml_module(appproject-overwatch
     URI project-overwatch
     VERSION 1.0
@@ -79,7 +84,10 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES icons/pulse.png
     RESOURCES icons/pulse.png
     RESOURCES icons/appproject-overwatch.png
-    RESOURCES image.png
+
+
+
+
 )
 qt_import_qml_plugins(appproject-overwatch)
 qt_finalize_executable(appproject-overwatch)

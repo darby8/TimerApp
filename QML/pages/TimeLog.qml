@@ -6,7 +6,8 @@ Item {
     id: timerLog
     property var logs: []
     property var allLogs: []
-
+    property var activity: []
+    property int savedFilterIndex: 0
     TimeLogPanel {
         id: timeLogPanel
 

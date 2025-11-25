@@ -14,6 +14,7 @@ ApplicationWindow {
     visible: true
     // title: Qt.application.displayName
     title: tracker.appName === "" ? "project overwatch" : tracker.appName;  // Binds dynamically
+
     Settings {
         id: appSettings
         property string accessToken: ""
@@ -24,6 +25,7 @@ ApplicationWindow {
     property var timeLogCache: null
     property var analyticsCache: null
     property var activityCache: null
+    property int savedFilterIndex: 0
 
     property string selectedTab: "Time"
     property string userName:""
@@ -50,26 +52,30 @@ ApplicationWindow {
             console.log("[AI Sync] Running every", aiSyncPeriod, "minutes");
             Script.getUserAnalytics(tracker.getAccessToken, function(data) {
                 console.log(JSON.stringify(data),"=========analytics========")
-                mainWindow.analyticsCache = data || [];
+                mainWindow.analyticsCache = data;
                 if (pageLoader.item && mainWindow.selectedTab === "Analytics") {
-                    pageLoader.item.logs = data || [];
+                    pageLoader.item.logs = data;
                 }
             });
             Script.getUserTimeLog(tracker.getAccessToken, function(data) {
-                data = data || [];
+                data = data;
                 mainWindow.timeLogCache = data;
                 mainWindow.activityCache = data;
                 console.log(JSON.stringify(data),"=======Timelog==========")
-                if (pageLoader.item && "allLogs" in pageLoader.item) {
-                    pageLoader.item.allLogs = data.slice();
-                    pageLoader.item.logs = data.slice();
-                    pageLoader.item.activity = data.slice();
-                } else {
+                if (pageLoader.item) {
+                    if (pageLoader.item.hasOwnProperty("allLogs"))
+                        pageLoader.item.allLogs = data.slice();
+
+                    if (pageLoader.item.hasOwnProperty("logs"))
+                        pageLoader.item.logs = data.slice();
+
+                    if (pageLoader.item.hasOwnProperty("activity"))
+                        pageLoader.item.activity = data.slice();  // will only run if property exists
+                }else {
                     // fallback: assign to mainWindow cache, will assign later when loaded
                     mainWindow.timeLogCache = data;
                 }
             });
-
         }
     }
 
@@ -345,7 +351,7 @@ ApplicationWindow {
                                         mainWindow.timeLogCache = data  // ✅ Save to cache
                                         if (pageLoader.item) {
                                             pageLoader.item.logs = data.slice();
-                                            pageLoader.item.allLogs = data
+                                            pageLoader.item.allLogs = data.slice();
                                         }
                                     })
                                 }

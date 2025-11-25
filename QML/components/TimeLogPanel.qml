@@ -15,6 +15,7 @@ Rectangle {
     property alias totalTimeText: totalTime.text
     property var logs: []
     property var allLogs: []
+     property var activity: []
     property bool filterApplied: false
 
     anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
@@ -77,27 +78,45 @@ Rectangle {
                     id: dateFilter
                     model: ["Today", "Yesterday", "Last 7 days", "Last 30 days"]
                     width: 160
-                    currentIndex: 0
+                    // currentIndex: 0
 
-                    onCurrentIndexChanged: applyFilter()
+                    // onCurrentIndexChanged: applyFilter()
+
+                    // Component.onCompleted: {
+                    //     applyFilter();  // ✅ Run once when component is created
+                    // }
 
                     Component.onCompleted: {
-                        applyFilter();  // ✅ Run once when component is created
-                    }
+                          Qt.callLater(function() {
+                              currentIndex = timerLog.savedFilterIndex
+                              applyFilter()
+                          })
+                      }
+
+                      onCurrentIndexChanged: {
+                          timerLog.savedFilterIndex = currentIndex
+                          applyFilter()
+                      }
+
+
 
                     function applyFilter() {
                         switch(currentIndex) {
                         case 0:
                             timeLogPanel.logs = filterLogs(timeLogPanel.allLogs, 1, 0);  // Today
+                            console.log("Today data is being fetched")
                             break;
                         case 1:
                             timeLogPanel.logs = filterLogs(timeLogPanel.allLogs, 1, 1);  // Yesterday
+                            console.log("Yesterday data is being fetched")
                             break;
                         case 2:
                             timeLogPanel.logs = filterLogs(timeLogPanel.allLogs, 7, 0);  // Last 7 days
+                            console.log("Last 7 days data is being fetched")
                             break;
                         case 3:
                             timeLogPanel.logs = filterLogs(timeLogPanel.allLogs, 30, 0); // Last 30 days
+                            console.log("Last 30 days data is being fetched")
                             break;
                         }
                     }
