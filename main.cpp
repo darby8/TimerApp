@@ -24,8 +24,8 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("Overwatch");
 
     // app.setApplicationName("Productivity Tracker");
-    app.setWindowIcon(QIcon(":/icons/app.ico"));
     app.setWindowIcon(QIcon(":/icons/app.png"));
+
     qDebug() << "Icon exists:" << QFile::exists(":/icons/app.png");
 
 

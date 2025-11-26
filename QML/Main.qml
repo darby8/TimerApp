@@ -12,6 +12,7 @@ ApplicationWindow {
     width: Screen.width
     height: Screen.height
     visible: true
+
     // title: Qt.application.displayName
     title: tracker.appName === "" ? "project overwatch" : tracker.appName;  // Binds dynamically
 
@@ -614,7 +615,6 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
-
         if (appSettings.accessToken !== "") {
 
             loggedIn = true;

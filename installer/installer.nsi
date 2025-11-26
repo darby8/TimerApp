@@ -12,6 +12,7 @@ Var StartOnBootCheckbox
 Name "${APPNAME}"
 OutFile "${APPNAME}-Setup.exe"
 
+; Installer icon
 Icon "input\app.ico"
 UninstallIcon "input\app.ico"
 
@@ -48,15 +49,15 @@ Section "Install"
     SetOutPath "$INSTDIR"
     File /r "input\*.*"
 
-    ; Start Menu & Desktop shortcuts
+    ; Start Menu & Desktop shortcuts with icon
     CreateDirectory "$SMPROGRAMS\${APPNAME}"
-    CreateShortcut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
-    CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
+    CreateShortcut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe" "" "$INSTDIR\input\app.ico"
+    CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe" "" "$INSTDIR\input\app.ico"
 
     ; Startup shortcut if checkbox selected
     ${If} $StartOnBoot == 1
         CreateDirectory "$SMSTARTUP"
-        CreateShortcut "$SMSTARTUP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
+        CreateShortcut "$SMSTARTUP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe" "" "$INSTDIR\input\app.ico"
     ${EndIf}
 
     ; Write uninstaller
