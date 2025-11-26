@@ -25,6 +25,7 @@ qt_add_executable(appproject-overwatch
 qt_add_resources(APP_RESOURCES resources.qrc)
 target_sources(appproject-overwatch PRIVATE ${APP_RESOURCES})
 
+set(WIN_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/app.rc")
 
 qt_add_qml_module(appproject-overwatch
     URI project-overwatch
