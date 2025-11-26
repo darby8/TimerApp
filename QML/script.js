@@ -192,7 +192,7 @@ function deleteProductivityById(accessToken, id, callback) {
 }
 
 function getUserAnalytics(token, callback){
-    console.log(token,"=====================token============================")
+    // console.log(token,"=====================token============================")
     var xhr = new XMLHttpRequest();
     xhr.open("GET", "https://backend-oversight.reak.co.in/api/analytics");
     xhr.setRequestHeader("Authorization", "Bearer " + token);

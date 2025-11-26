@@ -25,8 +25,9 @@ int main(int argc, char *argv[])
 
     // app.setApplicationName("Productivity Tracker");
     app.setWindowIcon(QIcon(":/icons/app.ico"));
-    qDebug() << "Icon exists:" << QFile::exists(":image.png");
-    qDebug() << "Exists:" << QFile::exists(":image.png");
+    app.setWindowIcon(QIcon(":/icons/app.png"));
+    qDebug() << "Icon exists:" << QFile::exists(":/icons/app.png");
+
 
     Tracker tracker;
     DatabaseHelper dbHelper;

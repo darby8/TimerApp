@@ -61,6 +61,10 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES icons/logout.svg
     RESOURCES icons/user.png
     RESOURCES icons/pulse.svg
+    RESOURCES icons/google.svg
+    RESOURCES icons/app.png
+    RESOURCES icons/Img.png
+    RESOURCES icons/appproject-overwatch.png
 
     RESOURCES QML/components/ScreenShot.qml
     RESOURCES QML/components/TimerPanel.qml
@@ -76,17 +80,8 @@ qt_add_qml_module(appproject-overwatch
     RESOURCES QML/pages/AzureLogin.qml
     RESOURCES QML/script.js
     RESOURCES QML/Main.qml
-    RESOURCES icons/Img.png
     QML_FILES QML/pages/Theme.qml
     RESOURCES QML/pages/qmldir
-    RESOURCES icons/google.svg
-    RESOURCES icons/pulse.png
-    RESOURCES icons/pulse.png
-    RESOURCES icons/pulse.png
-    RESOURCES icons/appproject-overwatch.png
-
-
-
 
 )
 qt_import_qml_plugins(appproject-overwatch)

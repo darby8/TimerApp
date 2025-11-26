@@ -168,7 +168,9 @@ ApplicationWindow {
                         text: Theme.date
                         font.pixelSize: 14
                         color: Theme.smalltxt
-                        Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+                        Layout.alignment: Qt.AlignVCenter
+                          Layout.preferredHeight: parent.height
+                          verticalAlignment: Text.AlignVCenter
                     }
                     Rectangle {
                         id: userButton
