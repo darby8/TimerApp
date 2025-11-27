@@ -181,9 +181,6 @@ jobs:
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/meta
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/data
 
-          #------------------------
-          #  UPDATED: Install for all users
-          #------------------------
           cat <<EOF > installer/input/config/config.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
@@ -209,48 +206,42 @@ jobs:
           </Package>
           EOF
 
-          #------------------------
-          # UPDATED installscript.qs (system-wide installation)
-          #------------------------
-cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
-function Component() {}
+          cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
+          function Component() {}
 
-Component.prototype.createOperations = function() {
-    component.createOperations();
+          Component.prototype.createOperations = function() {
+              component.createOperations();
+              try {
+                  var targetDir = installer.value("TargetDir");
+                  var appPath = targetDir + "/project-overwatch.AppImage";
 
-    try {
-        var targetDir = installer.value("TargetDir");
-        var appPath = targetDir + "/project-overwatch.AppImage";
+                  component.addOperation("Execute", "/bin/chmod", "+x", appPath);
 
-        component.addOperation("Execute", "/bin/chmod", "+x", appPath);
+                  component.addOperation("Copy",
+                      targetDir + "/project-overwatch.desktop",
+                      "/usr/share/applications/project-overwatch.desktop"
+                  );
 
-        // system-wide desktop entry
-        component.addOperation("Copy",
-            targetDir + "/project-overwatch.desktop",
-            "/usr/share/applications/project-overwatch.desktop"
-        );
+                  component.addOperation("Copy",
+                      targetDir + "/project-overwatch.png",
+                      "/usr/share/icons/hicolor/256x256/apps/project-overwatch.png"
+                  );
 
-        // system-wide icon
-        component.addOperation("Copy",
-            targetDir + "/project-overwatch.png",
-            "/usr/share/icons/hicolor/256x256/apps/project-overwatch.png"
-        );
+              } catch (e) {
+                  console.log("Installer error: " + e);
+              }
+          }
 
-    } catch (e) {
-        console.log("Installer error: " + e);
-    }
-}
-
-Component.prototype.installationFinished = function() {
-    try {
-        var targetDir = installer.value("TargetDir");
-        var appPath = targetDir + "/project-overwatch.AppImage";
-        QProcess.startDetached(appPath, []);
-    } catch (e) {
-        console.log("Failed to auto-run: " + e);
-    }
-}
-EOF
+          Component.prototype.installationFinished = function() {
+              try {
+                  var targetDir = installer.value("TargetDir");
+                  var appPath = targetDir + "/project-overwatch.AppImage";
+                  QProcess.startDetached(appPath, []);
+              } catch (e) {
+                  console.log("Failed to auto-run: " + e);
+              }
+          }
+          EOF
 
           APPFILE=$(ls -1t *.AppImage | head -n 1)
           cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
