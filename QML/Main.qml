@@ -556,39 +556,49 @@ ApplicationWindow {
             Canvas {
                 id: loaderCanvas
                 anchors.fill: parent
-                renderTarget: Canvas.Image   // <-- IMPORTANT on Windows for high DPI
+                renderTarget: Canvas.Image
+                renderStrategy: Canvas.Cooperative   // <-- Important for Windows DPI
+
                 smooth: true
                 antialiasing: true
 
                 property real rotation: 0
                 property real pixelRatio: Screen.devicePixelRatio
 
+                onAvailableChanged: {
+                    // Fix the real backing store size
+                    loaderCanvas.requestPaint();
+                }
+
                 onPaint: {
+                    var pr = pixelRatio;
+
+                    // Increase backing store size to avoid clipping
+                    var realW = (width + 4) * pr;     // +4 px padding
+                    var realH = (height + 4) * pr;     // +4 px padding
+
+                    // MUST set physical pixel size explicitly
+                    var canvas = getContext("2d").canvas;
+                    if (canvas.width !== realW || canvas.height !== realH) {
+                        canvas.width = realW;
+                        canvas.height = realH;
+                    }
+
                     var ctx = getContext("2d");
                     ctx.reset();
-
-                    var w = width * pixelRatio;
-                    var h = height * pixelRatio;
-
-                    // Proper DPI scaling
-                    ctx.canvas.width = w;
-                    ctx.canvas.height = h;
-                    ctx.scale(pixelRatio, pixelRatio);
-
+                    ctx.scale(pr, pr);
                     ctx.clearRect(0, 0, width, height);
 
                     var cx = width / 2;
                     var cy = height / 2;
                     var radius = 30;
 
-                    // Background circle
                     ctx.beginPath();
                     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
                     ctx.lineWidth = 4;
                     ctx.strokeStyle = Theme.softgray;
                     ctx.stroke();
 
-                    // Spinning arc
                     ctx.beginPath();
                     ctx.arc(cx, cy, radius, rotation, rotation + Math.PI * 1.5, false);
                     ctx.lineWidth = 4;
@@ -602,7 +612,7 @@ ApplicationWindow {
                     ctx.shadowColor = Theme.accent;
                     ctx.stroke();
                 }
-            // }
+
                 Timer {
                     interval: 16
                     repeat: true
@@ -615,6 +625,7 @@ ApplicationWindow {
                     }
                 }
             }
+
 
             Text {
                 text: "Loading..."
