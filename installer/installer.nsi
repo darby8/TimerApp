@@ -4,6 +4,7 @@
 !define APPNAME "Overwatch"
 !define COMPANY "Reak"
 !define VERSION "1.0.0"
+
 !define INSTALLDIR "$PROGRAMFILES\${COMPANY}\${APPNAME}"
 
 Var StartOnBoot
@@ -18,13 +19,18 @@ UninstallIcon "input\app.ico"
 InstallDir "${INSTALLDIR}"
 RequestExecutionLevel admin
 
+; ------------------------------
+; PAGES
+; ------------------------------
 Page directory
 Page custom StartOnBootPage StartOnBootPageLeave
 Page instfiles
 
-; --- Start on Boot Checkbox Page ---
+; ------------------------------
+; STARTUP CHOICE PAGE
+; ------------------------------
 Function StartOnBootPage
-    !insertmacro MUI_HEADER_TEXT "Startup Option" "Choose whether the app starts with Windows"
+    !insertmacro MUI_HEADER_TEXT "Startup Option" "Choose whether the app starts automatically"
 
     nsDialogs::Create /NOUNLOAD 1018
     Pop $0
@@ -32,9 +38,9 @@ Function StartOnBootPage
         Abort
     ${EndIf}
 
-    ${NSD_CreateCheckbox} 10u 10u 200u 12u "Run Overwatch at system startup"
+    ${NSD_CreateCheckbox} 10u 10u 240u 12u "Run Overwatch at system startup (all users)"
     Pop $StartOnBootCheckbox
-    ${NSD_Check} $StartOnBootCheckbox ; default checked
+    ${NSD_Check} $StartOnBootCheckbox  ; default checked
 
     nsDialogs::Show
 FunctionEnd
@@ -43,47 +49,65 @@ Function StartOnBootPageLeave
     ${NSD_GetState} $StartOnBootCheckbox $StartOnBoot
 FunctionEnd
 
-; --- Install Section ---
+; ------------------------------
+; INSTALL SECTION
+; ------------------------------
 Section "Install"
+
     SetOutPath "$INSTDIR"
     File /r "input\*.*"
 
-    ; Start Menu & Desktop shortcuts
-    CreateDirectory "$SMPROGRAMS\${APPNAME}"
-    CreateShortcut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
-    CreateShortcut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
+    ; --------------------------
+    ; CREATE SHORTCUTS FOR ALL USERS
+    ; --------------------------
+    ; Desktop
+    CreateShortCut "$CommonDesktop\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 
-    ; Startup shortcut if checkbox selected
+    ; Start Menu folder
+    CreateDirectory "$CommonStartMenu\${APPNAME}"
+    CreateShortCut "$CommonStartMenu\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
+
+    ; --------------------------
+    ; AUTO START (HKLM RUN)
+    ; --------------------------
     ${If} $StartOnBoot == 1
-        CreateDirectory "$SMSTARTUP"
-        CreateShortcut "$SMSTARTUP\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
+        WriteRegStr HKLM \
+            "Software\Microsoft\Windows\CurrentVersion\Run" \
+            "${APPNAME}" \
+            "$INSTDIR\appproject-overwatch.exe"
     ${EndIf}
 
-    ; Write uninstaller
+    ; --------------------------
+    ; WRITE UNINSTALLER
+    ; --------------------------
     WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-    ; Add entry to Programs & Features
+    ; Programs & Features entry
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "${COMPANY}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "${VERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "InstallLocation" "$INSTDIR"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "UninstallString" "$INSTDIR\Uninstall.exe"
+
 SectionEnd
 
-; --- Uninstall Section ---
+; ------------------------------
+; UNINSTALL SECTION
+; ------------------------------
 Section "Uninstall"
-    ; Remove Desktop & Start Menu shortcuts
-    Delete "$DESKTOP\${APPNAME}.lnk"
-    Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
-    RMDir "$SMPROGRAMS\${APPNAME}"
+    ; Remove AUTO-START
+    DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}"
 
-    ; Remove Startup shortcut
-    Delete "$SMSTARTUP\${APPNAME}.lnk"
+    ; Remove shortcuts (ALL USERS)
+    Delete "$CommonDesktop\${APPNAME}.lnk"
+    Delete "$CommonStartMenu\${APPNAME}\${APPNAME}.lnk"
+    RMDir "$CommonStartMenu\${APPNAME}"
 
-    ; Remove installation folder
+    ; Remove installed files
     RMDir /r "$INSTDIR"
 
     ; Remove Programs & Features entry
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
+
 SectionEnd
 
