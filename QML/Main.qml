@@ -505,48 +505,104 @@ ApplicationWindow {
             height: 90
             anchors.centerIn: parent
 
+            // Canvas {
+            //     id: loaderCanvas
+            //     anchors.fill: parent
+            //     renderTarget: Canvas.Image
+            //     smooth: true
+            //     antialiasing: true
+            //     property real pixelRatio: Screen.devicePixelRatio
+            //     property real rotation: 0
+
+                // onPaint: {
+                //     var ctx = getContext("2d");
+                //     var dpr = Screen.devicePixelRatio || 1;
+
+                //     // Make canvas high resolution
+                //     ctx.reset();
+                //     ctx.clearRect(0, 0, width, height);
+
+                //     var w = width * dpr;
+                //     var h = height * dpr;
+                //     ctx.scale(dpr, dpr);
+
+                //     var centerX = Math.round(width / 2);
+                //     var centerY = Math.round(height / 2);
+                //     var radius = 30;
+
+                //     // Background circle
+                //     ctx.beginPath();
+                //     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                //     ctx.lineWidth = 4;
+                //     ctx.strokeStyle = Theme.softgray
+                //     ctx.stroke();
+
+                //     // Spinning arc
+                //     ctx.beginPath();
+                //     ctx.arc(centerX, centerY, radius, rotation, rotation + Math.PI * 1.5, false);
+                //     ctx.lineWidth = 4;
+                //     var gradient = ctx.createLinearGradient(0, 0, width, height);
+                //     gradient.addColorStop(0, Theme.accent);           // start color
+                //     gradient.addColorStop(1, Theme.loadergradientcolor); // lighter blue end for smooth gradient
+                //     ctx.strokeStyle = gradient;
+
+                //     ctx.shadowBlur = 1;
+                //     ctx.shadowColor = Theme.accent;
+                //     ctx.stroke();
+                // }
+
+
+
             Canvas {
                 id: loaderCanvas
                 anchors.fill: parent
+                renderTarget: Canvas.Image   // <-- IMPORTANT on Windows for high DPI
+                smooth: true
+                antialiasing: true
+
                 property real rotation: 0
+                property real pixelRatio: Screen.devicePixelRatio
 
                 onPaint: {
                     var ctx = getContext("2d");
-                    var dpr = Screen.devicePixelRatio || 1;
-
-                    // Make canvas high resolution
                     ctx.reset();
+
+                    var w = width * pixelRatio;
+                    var h = height * pixelRatio;
+
+                    // Proper DPI scaling
+                    ctx.canvas.width = w;
+                    ctx.canvas.height = h;
+                    ctx.scale(pixelRatio, pixelRatio);
+
                     ctx.clearRect(0, 0, width, height);
 
-                    var w = width * dpr;
-                    var h = height * dpr;
-                    ctx.scale(dpr, dpr);
-
-                    var centerX = Math.round(width / 2);
-                    var centerY = Math.round(height / 2);
+                    var cx = width / 2;
+                    var cy = height / 2;
                     var radius = 30;
 
                     // Background circle
                     ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
                     ctx.lineWidth = 4;
-                    ctx.strokeStyle = Theme.softgray
+                    ctx.strokeStyle = Theme.softgray;
                     ctx.stroke();
 
                     // Spinning arc
                     ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, rotation, rotation + Math.PI * 1.5, false);
+                    ctx.arc(cx, cy, radius, rotation, rotation + Math.PI * 1.5, false);
                     ctx.lineWidth = 4;
+
                     var gradient = ctx.createLinearGradient(0, 0, width, height);
-                    gradient.addColorStop(0, Theme.accent);           // start color
-                    gradient.addColorStop(1, Theme.loadergradientcolor); // lighter blue end for smooth gradient
+                    gradient.addColorStop(0, Theme.accent);
+                    gradient.addColorStop(1, Theme.loadergradientcolor);
                     ctx.strokeStyle = gradient;
 
                     ctx.shadowBlur = 1;
                     ctx.shadowColor = Theme.accent;
                     ctx.stroke();
                 }
-
+            // }
                 Timer {
                     interval: 16
                     repeat: true
