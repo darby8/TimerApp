@@ -246,9 +246,18 @@ jobs:
       # ---------------------------------------------------------
       # Install QtIFW
       # ---------------------------------------------------------
-      - name: Install Qt Installer Framework
+      - name: Install Qt Installer Framework (QtIFW)
         run: |
-          python3 -m aqt install-tool linux desktop tools_ifw 4.8.0 --outputdir QtIFW
+          pip install aqtinstall==3.1.18 --root-user-action=ignore
+          echo "Listing available Qt Installer Framework versions..."
+          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt || true
+          cat ifw_versions.txt || true
+
+          IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1 || echo "4.6.1")
+          echo "Detected IFW version: $IFW_VERSION"
+
+          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || \
+          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
 
       # ---------------------------------------------------------
       # Build .run installer (offline)
