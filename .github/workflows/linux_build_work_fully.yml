@@ -248,7 +248,7 @@ jobs:
       # ---------------------------------------------------------
       - name: Install Qt Installer Framework
         run: |
-          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+          python3 -m aqt install-tool linux desktop tools_ifw 4.8.0 --outputdir QtIFW
 
       # ---------------------------------------------------------
       # Build .run installer (offline)
