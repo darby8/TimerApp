@@ -501,111 +501,45 @@ ApplicationWindow {
 
         // Center spinning loader
         Item {
-            width: 90
-            height: 90
+            width: 110
+            height: 110
             anchors.centerIn: parent
-
-            // Canvas {
-            //     id: loaderCanvas
-            //     anchors.fill: parent
-            //     renderTarget: Canvas.Image
-            //     smooth: true
-            //     antialiasing: true
-            //     property real pixelRatio: Screen.devicePixelRatio
-            //     property real rotation: 0
-
-                // onPaint: {
-                //     var ctx = getContext("2d");
-                //     var dpr = Screen.devicePixelRatio || 1;
-
-                //     // Make canvas high resolution
-                //     ctx.reset();
-                //     ctx.clearRect(0, 0, width, height);
-
-                //     var w = width * dpr;
-                //     var h = height * dpr;
-                //     ctx.scale(dpr, dpr);
-
-                //     var centerX = Math.round(width / 2);
-                //     var centerY = Math.round(height / 2);
-                //     var radius = 30;
-
-                //     // Background circle
-                //     ctx.beginPath();
-                //     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                //     ctx.lineWidth = 4;
-                //     ctx.strokeStyle = Theme.softgray
-                //     ctx.stroke();
-
-                //     // Spinning arc
-                //     ctx.beginPath();
-                //     ctx.arc(centerX, centerY, radius, rotation, rotation + Math.PI * 1.5, false);
-                //     ctx.lineWidth = 4;
-                //     var gradient = ctx.createLinearGradient(0, 0, width, height);
-                //     gradient.addColorStop(0, Theme.accent);           // start color
-                //     gradient.addColorStop(1, Theme.loadergradientcolor); // lighter blue end for smooth gradient
-                //     ctx.strokeStyle = gradient;
-
-                //     ctx.shadowBlur = 1;
-                //     ctx.shadowColor = Theme.accent;
-                //     ctx.stroke();
-                // }
-
-
 
             Canvas {
                 id: loaderCanvas
                 anchors.fill: parent
-                renderTarget: Canvas.Image
-                renderStrategy: Canvas.Cooperative   // <-- Important for Windows DPI
-
-                smooth: true
-                antialiasing: true
-
                 property real rotation: 0
-                property real pixelRatio: Screen.devicePixelRatio
-
-                onAvailableChanged: {
-                    // Fix the real backing store size
-                    loaderCanvas.requestPaint();
-                }
 
                 onPaint: {
-                    var pr = pixelRatio;
-
-                    // Increase backing store size to avoid clipping
-                    var realW = (width + 4) * pr;     // +4 px padding
-                    var realH = (height + 4) * pr;     // +4 px padding
-
-                    // MUST set physical pixel size explicitly
-                    var canvas = getContext("2d").canvas;
-                    if (canvas.width !== realW || canvas.height !== realH) {
-                        canvas.width = realW;
-                        canvas.height = realH;
-                    }
-
                     var ctx = getContext("2d");
+                    var dpr = Screen.devicePixelRatio || 1;
+
+                    // Make canvas high resolution
                     ctx.reset();
-                    ctx.scale(pr, pr);
                     ctx.clearRect(0, 0, width, height);
 
-                    var cx = width / 2;
-                    var cy = height / 2;
+                    var w = width * dpr;
+                    var h = height * dpr;
+                    ctx.scale(dpr, dpr);
+
+                    var centerX = Math.round(width / 2);
+                    var centerY = Math.round(height / 2);
                     var radius = 30;
 
+                    // Background circle
                     ctx.beginPath();
-                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
                     ctx.lineWidth = 4;
-                    ctx.strokeStyle = Theme.softgray;
+                    ctx.strokeStyle = Theme.softgray
                     ctx.stroke();
 
+                    // Spinning arc
                     ctx.beginPath();
-                    ctx.arc(cx, cy, radius, rotation, rotation + Math.PI * 1.5, false);
+                    ctx.arc(centerX, centerY, radius, rotation, rotation + Math.PI * 1.5, false);
                     ctx.lineWidth = 4;
-
                     var gradient = ctx.createLinearGradient(0, 0, width, height);
-                    gradient.addColorStop(0, Theme.accent);
-                    gradient.addColorStop(1, Theme.loadergradientcolor);
+                    gradient.addColorStop(0, Theme.accent);           // start color
+                    gradient.addColorStop(1, Theme.loadergradientcolor); // lighter blue end for smooth gradient
                     ctx.strokeStyle = gradient;
 
                     ctx.shadowBlur = 1;
@@ -625,7 +559,6 @@ ApplicationWindow {
                     }
                 }
             }
-
 
             Text {
                 text: "Loading..."
