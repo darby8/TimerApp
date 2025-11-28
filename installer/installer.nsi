@@ -24,17 +24,16 @@ InstallDir "${INSTALLDIR}"
 RequestExecutionLevel admin
 
 ; ------------------------------
-; PAGES
+; INSTALLER PAGES
 ; ------------------------------
 Page directory
 Page custom StartOnBootPage StartOnBootPageLeave
 Page instfiles
 
 ; ------------------------------
-; UNINSTALL PAGES
-; (custom page to ask about removing user data)
+; UNINSTALLER PAGES (MUST begin with un.)
 ; ------------------------------
-UninstPage custom UninstallUserDataPage UninstallUserDataPageLeave
+UninstPage custom un.UninstallUserDataPage un.UninstallUserDataPageLeave
 UninstPage instfiles
 
 ; ------------------------------
@@ -61,9 +60,9 @@ Function StartOnBootPageLeave
 FunctionEnd
 
 ; ------------------------------
-; UNINSTALL: Ask whether to remove user data
+; UNINSTALL PAGE (must use un.)
 ; ------------------------------
-Function UninstallUserDataPage
+Function un.UninstallUserDataPage
     !insertmacro MUI_HEADER_TEXT "Uninstall Options" "Choose what to remove"
 
     nsDialogs::Create /NOUNLOAD 1018
@@ -74,12 +73,12 @@ Function UninstallUserDataPage
 
     ${NSD_CreateCheckbox} 10u 10u 300u 12u "Delete user data (database, settings, screenshots)"
     Pop $RemoveUserDataCheckbox
-    ${NSD_Uncheck} $RemoveUserDataCheckbox  ; default unchecked
+    ${NSD_Uncheck} $RemoveUserDataCheckbox
 
     nsDialogs::Show
 FunctionEnd
 
-Function UninstallUserDataPageLeave
+Function un.UninstallUserDataPageLeave
     ${NSD_GetState} $RemoveUserDataCheckbox $RemoveUserData
 FunctionEnd
 
@@ -91,32 +90,22 @@ Section "Install"
     SetOutPath "$INSTDIR"
     File /r "input\*.*"
 
-    ; --------------------------
-    ; CREATE SHORTCUTS FOR ALL USERS
-    ; --------------------------
-    ; Desktop
+    ; Desktop shortcut
     CreateShortCut "$CommonDesktop\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 
-    ; Start Menu folder
+    ; Start menu shortcut
     CreateDirectory "$CommonStartMenu\${APPNAME}"
     CreateShortCut "$CommonStartMenu\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\appproject-overwatch.exe"
 
-    ; --------------------------
-    ; AUTO START (HKLM RUN)
-    ; --------------------------
+    ; Auto start
     ${If} $StartOnBoot == 1
-        WriteRegStr HKLM \
-            "Software\Microsoft\Windows\CurrentVersion\Run" \
-            "${APPNAME}" \
-            "$INSTDIR\appproject-overwatch.exe"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}" "$INSTDIR\appproject-overwatch.exe"
     ${EndIf}
 
-    ; --------------------------
-    ; WRITE UNINSTALLER
-    ; --------------------------
+    ; Write uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-    ; Programs & Features entry
+    ; Programs & Features
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "${COMPANY}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "${VERSION}"
@@ -129,10 +118,9 @@ SectionEnd
 ; UNINSTALL SECTION
 ; ------------------------------
 Section "Uninstall"
-    ; Remove AUTO-START
+
     DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${APPNAME}"
 
-    ; Remove shortcuts (ALL USERS)
     Delete "$CommonDesktop\${APPNAME}.lnk"
     Delete "$CommonStartMenu\${APPNAME}\${APPNAME}.lnk"
     RMDir "$CommonStartMenu\${APPNAME}"
@@ -143,13 +131,8 @@ Section "Uninstall"
     ; Remove Programs & Features entry
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
 
-    ; --------------------------
-    ; OPTIONAL: Remove user data stored in %APPDATA%\Reak\Overwatch
-    ; This is where QStandardPaths::AppDataLocation typically maps to for your app:
-    ;   C:\Users\<User>\AppData\Roaming\Reak\Overwatch
-    ; --------------------------
+    ; Remove AppData only if selected
     ${If} $RemoveUserData == 1
-        ; Remove the entire folder recursively (database, screenshots, settings)
         RMDir /r "$APPDATA\Reak\Overwatch"
     ${EndIf}
 
