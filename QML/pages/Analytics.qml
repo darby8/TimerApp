@@ -3,19 +3,18 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
 import QtCharts
+import Qt.labs.settings 1.1
 import "../components"
 Item {
     id: analytics
     property var activity: []
     property var logs: []
 
-
     Rectangle {
         width: parent.width
         id: headerSection
         // anchors.fill: parent
         z:1000
-
         color: Theme.bg
         ColumnLayout {
             id: statsRow
@@ -24,9 +23,6 @@ Item {
             anchors.fill: parent
             anchors.margins: 10
             spacing: 16
-
-            // Top Stats
-
 
             Row {
                 spacing: 8
@@ -39,14 +35,27 @@ Item {
                     color: Theme.smalltxt;
                     anchors.verticalCenter: parent.verticalCenter
                 }
+                Settings {
+                    id: filterSettings
+                    property int savedFilterIndexA: 0     // default Today
+                }
 
                 ComboBox {
                     id: dateFilter
                     model: ["Today", "Yesterday", "Last 7 days", "Last 30 days"]
                     width: 160
-                    currentIndex: 0
+                    Component.onCompleted: {
+                            Qt.callLater(function() {
+                                currentIndex = filterSettings.savedFilterIndexA
+                                applyFilter()
+                            })
+                        }
 
                     onCurrentIndexChanged: {
+                           filterSettings.savedFilterIndexA = currentIndex   // save permanently
+                           applyFilter()
+                       }
+                    function applyFilter() {
                         switch(currentIndex) {
                         case 0:
                             barChart.titleText = "Daily Activity (Today)";
@@ -71,7 +80,6 @@ Item {
                         }
                     }
                 }
-
             }
             TopStatsPanel {
                 Layout.fillWidth: true

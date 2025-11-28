@@ -16,7 +16,7 @@ Rectangle {
         spacing: 70
 
         Row {
-             spacing: 15
+
             Image {
                 source: "../../icons/times.svg"
                 width: 22
@@ -37,12 +37,12 @@ Rectangle {
 
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 20
+            // anchors.verticalCenter: parent.verticalCenter
+            spacing: 18
             // anchors.centerIn: parent
             Rectangle {
-                width: 320
-                height: 100
+                width:  220      // becomes smaller on small screens, max 220
+                  height: 90
                 color:Theme.softgrays
                 radius: 12
                 border.color: Theme.softgray

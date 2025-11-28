@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import Qt.labs.settings 1.1
 import QtQuick.Layouts
 import "../script.js" as Script
 import "../pages"
@@ -74,30 +75,27 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
+
+                Settings {
+                    id: filterSettings
+                    property int savedFilterIndexB: 0     // default Today
+                }
+
                 ComboBox {
                     id: dateFilter
                     model: ["Today", "Yesterday", "Last 7 days", "Last 30 days"]
                     width: 160
-                    // currentIndex: 0
-
-                    // onCurrentIndexChanged: applyFilter()
-
-                    // Component.onCompleted: {
-                    //     applyFilter();  // ✅ Run once when component is created
-                    // }
-
                     Component.onCompleted: {
-                          Qt.callLater(function() {
-                              currentIndex = timerLog.savedFilterIndex
-                              applyFilter()
-                          })
-                      }
+                            Qt.callLater(function() {
+                                currentIndex = filterSettings.savedFilterIndexB
+                                applyFilter()
+                            })
+                        }
 
-                      onCurrentIndexChanged: {
-                          timerLog.savedFilterIndex = currentIndex
-                          applyFilter()
-                      }
-
+                    onCurrentIndexChanged: {
+                           filterSettings.savedFilterIndexB = currentIndex   // save permanently
+                           applyFilter()
+                       }
 
 
                     function applyFilter() {

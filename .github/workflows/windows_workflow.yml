@@ -1,0 +1,177 @@
+name: Windows Build & NSIS Installer
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      QT_VERSION: 6.5.3
+      BUILD_DIR: build
+      APP_NAME: appproject-overwatch.exe
+      INSTALLER_SRC: installer/input
+      INSTALLER_SCRIPT: installer/installer.nsi
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Python + aqt
+        shell: cmd
+        run: |
+          python -m pip install --upgrade pip
+          pip install aqtinstall==3.3.0
+
+
+      - name: Install Qt 6.5.3 (MSVC2019)
+        shell: pwsh
+        run: |
+          $qtBase = "$env:RUNNER_TEMP\Qt"
+          python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2019_64 `
+            --outputdir $qtBase `
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
+
+          echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
+
+   
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake -S . -B $env:BUILD_DIR `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
+
+
+      - name: Build project (Release)
+        shell: pwsh
+        run: cmake --build $env:BUILD_DIR --config Release
+
+
+      - name: Deploy Qt (windeployqt)
+        shell: pwsh
+        run: |
+          $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
+          & "$QtBin\windeployqt.exe" `
+            "$env:BUILD_DIR\Release\$env:APP_NAME" `
+            --release `
+            --qmldir "$env:GITHUB_WORKSPACE\QML"
+
+      - name: Copy QML folder
+        shell: pwsh
+        run: |
+          xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
+
+
+      - name: Restore PFX certificate
+        shell: pwsh
+        run: |
+          $b64 = @"
+          ${{ secrets.WINDOWS_CERT_PFX }}
+          "@
+
+          $bytes = [System.Convert]::FromBase64String($b64.Trim())
+          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+          [System.IO.File]::WriteAllBytes($pfxPath, $bytes)
+
+          echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
+
+
+      - name: Find signtool
+        id: signtool
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter signtool.exe |
+                      Sort-Object FullName |
+                      Select-Object -First 1
+
+          if (-not $signtool) {
+            Write-Error "❌ signtool.exe not found!"
+            exit 1
+          }
+
+          echo "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+          Write-Host "✔ signtool found at: $($signtool.FullName)"
+
+
+      - name: Sign Application EXE
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+        run: |
+          $pfxPath = "$env:PFX_PATH"
+          $exe = "$env:BUILD_DIR\Release\$env:APP_NAME"
+
+          Write-Host "Signing file: $exe"
+          Write-Host "Using certificate: $pfxPath"
+
+          & $env:SIGNTOOL sign `
+            /f $pfxPath `
+            /p $env:PFX_PASSWORD `
+            /fd SHA256 `
+            /td SHA256 `
+            /tr http://timestamp.digicert.com `
+            /v $exe
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "❌ SignTool FAILED"
+            exit 1
+          } else {
+            Write-Host "✔ SignTool succeeded"
+          }
+
+      - name: Create installer source folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env.INSTALLER_SRC }}" | Out-Null
+          Copy-Item -Path "${{ env.BUILD_DIR }}\Release\*" -Destination "${{ env.INSTALLER_SRC }}" -Recurse -Force
+
+      - name: Install NSIS
+        shell: cmd
+        run: choco install nsis -y
+
+
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          cd installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 installer.nsi
+          cd ..
+
+
+      - name: Sign Windows Installer
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+        run: |
+          $installer = "installer\\Overwatch-Setup.exe"
+
+          if (!(Test-Path $installer)) {
+            Write-Error "❌ Installer EXE missing!"
+            exit 1
+          }
+
+          & $env:SIGNTOOL sign `
+            /f "$env:PFX_PATH" `
+            /p "$env:PFX_PASSWORD" `
+            /fd sha256 `
+            /tr http://timestamp.digicert.com `
+            /td sha256 `
+            "$installer"
+
+          Write-Host "✔ Installer signed successfully!"
+
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Installer
+          path: installer\*.exe
+

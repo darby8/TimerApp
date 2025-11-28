@@ -25,7 +25,7 @@ Rectangle {
         spacing: 4
         Text { text: titleText; font.pointSize: 12; font.bold: true }
         ChartView {
-            width: parent.width+70; height: 400
+            width: parent.width+70; height: 380
             legend.visible: true
             antialiasing: false
             BarCategoryAxis {

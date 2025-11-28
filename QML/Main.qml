@@ -123,32 +123,30 @@ ApplicationWindow {
             visible: mainWindow.loggedIn
             // AppBar
             Rectangle {
-                width: parent.width-20
+                width: parent.width - 20
                 height: 54
                 color: Theme.bg
-
                 radius: 12
                 border.width: 1
                 border.color: Theme.softgray
-                anchors.topMargin: 7    // margin from top
-                anchors.horizontalCenter: parent.horizontalCenter // center it horizontally
                 anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.topMargin: 7
                 visible: mainWindow.loggedIn
 
-                RowLayout {
+                GridLayout {
                     anchors.fill: parent
                     anchors.margins: 12
-                    spacing: 8
-                    visible: mainWindow.loggedIn
+                    columns: 3
 
+                    // ---------- LEFT SECTION ----------
                     RowLayout {
-                        spacing: 8
-                        Layout.fillHeight: true
-                        Layout.fillWidth: true
                         Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                        Layout.fillWidth: true
+                        spacing: 8
+
                         Image {
                             source: "qrc:/project-overwatch/icons/pulse.svg"
-                            // width: 25; height: 25
                             Layout.preferredHeight: 25
                             Layout.preferredWidth: 25
                             sourceSize.width: width * Screen.devicePixelRatio
@@ -157,7 +155,7 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: "Project overwatch" //tracker.appName
+                            text: "Project overwatch"
                             font.bold: true
                             font.pixelSize: 23
                             color: Theme.text
@@ -165,27 +163,29 @@ ApplicationWindow {
                         }
                     }
 
+                    // ---------- CENTER DATE ----------
                     Text {
                         text: Theme.date
                         font.pixelSize: 14
                         color: Theme.smalltxt
-                        Layout.alignment: Qt.AlignVCenter
-                          Layout.preferredHeight: parent.height
-                          verticalAlignment: Text.AlignVCenter
+
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
+
+                    // ---------- RIGHT USER BUTTON ----------
                     Rectangle {
                         id: userButton
-                        Layout.alignment: Qt.AlignRight
-                        Layout.rightMargin: 15
-                        // Layout.bottomMargin: 10
-                        // width: 170; height: 32
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                         Layout.preferredWidth: 170
                         Layout.preferredHeight: 32
-                        radius:10
+                        radius: 10
                         border.width: 1
                         border.color: Theme.softgray
 
-                        // guard to avoid instant re-open after a close
                         property double lastCloseMs: 0
 
                         MouseArea {
@@ -206,74 +206,83 @@ ApplicationWindow {
                             }
                         }
 
-
                         Row {
                             anchors.centerIn: parent
                             spacing: 4
-                            Image { source: "qrc:/project-overwatch/icons/user.png"; width: 16; height: 16; smooth: true }
-                            Text { text: "Welcome," +mainWindow.userName; font.pixelSize: 15; color: Theme.txtcolor;  }
+                            Image {
+                                source: "qrc:/project-overwatch/icons/user.png"
+                                width: 16; height: 16
+                                smooth: true
+                            }
+                            Text {
+                                text: "Welcome, " + mainWindow.userName
+                                font.pixelSize: 15
+                                color: Theme.txtcolor
+                            }
                         }
 
-                        // Real dropdown menu
+                        // ---------- FIXED & PERFECT MENU ----------
                         Menu {
                             id: userMenu
 
-                            // position the menu directly below the rectangle (in window coords)
                             x: userButton.mapToItem(null, 0, 0).x
-                            y: userButton.mapToItem(null, 0, userButton.height).y + 2
+                            y: userButton.mapToItem(null, 0, userButton.height).y -13
                             width: userButton.width
 
-                            // close when clicking outside or pressing Esc
                             closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
                             modal: false
                             focus: true
 
                             onClosed: userButton.lastCloseMs = Date.now()
+
                             background: Rectangle {
-                                radius:5
+                                radius: 8
                                 border.width: 1
-                                border.color: "lightgray"
+                                border.color: "#E0E0E0"
+                                color: Theme.bg
+                                anchors.fill: parent
+                                anchors.margins: 6   // FIX: padding for full menu
                             }
 
                             MenuItem {
-                                id:logout
+                                id: logout
                                 text: "Logout"
-                                topPadding: 6
-                                bottomPadding: 6
-                                leftPadding: 16
-                                rightPadding: 12
-                                spacing: 8
+                                height: 36
+                                leftPadding: 14
+                                rightPadding: 14
+
                                 contentItem: Text {
                                     text: parent.text
-                                    anchors.centerIn: parent  // Center the text
+                                    anchors.centerIn: parent
+                                    font.pixelSize: 15
+                                    color: "black"
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
-                                    wrapMode: Text.NoWrap
-                                    elide: Text.ElideRight
-                                    // color: "white"
-                                    color: "black"
-                                }
-                                background: Rectangle {
-                                    radius:5
-                                    color: logout.hovered ? Theme.colorBlue : Theme.bg  // Blue on hover, white otherwise
+
                                 }
 
+                                background: Rectangle {
+                                    radius: 6
+                                    color: logout.hovered ? Theme.colorBlue : Theme.bg
+                                    anchors.fill: parent
+                                    anchors.margins: 4   // FIX: prevent bottom touching
+                                }
 
                                 onTriggered: {
-                                    console.log("Logging out…")
+
                                     globalLoader.showLoader();
                                     mainWindow.analyticsCache = null
                                     mainWindow.activityCache = null
-                                    mainWindow.timeLogCache = null // ✅ reset cache
+                                    mainWindow.timeLogCache = null
                                     mainWindow.userEmail = ""
                                     Script.logout(tracker.getAccessToken)
-
                                 }
                             }
                         }
                     }
                 }
             }
+
 
             // Tabbar
             Rectangle {
@@ -615,6 +624,7 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+
         if (appSettings.accessToken !== "") {
 
             loggedIn = true;
