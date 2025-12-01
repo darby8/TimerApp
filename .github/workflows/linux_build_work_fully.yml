@@ -127,12 +127,12 @@ jobs:
       - name: Download linuxdeploy & plugin
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-        x86_64.AppImage
           chmod +x linuxdeploy*.AppImage
 
       - name: Download linuxdeployqt
         run: |
-          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
+          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous- x86_64.AppImage -O linuxdeployqt
           chmod +x linuxdeployqt
 
       - name: Install QtWebEngine runtime dependencies
@@ -184,20 +184,20 @@ jobs:
 
           cat <<EOF > $DEB_DIR/DEBIAN/postinst
 #!/bin/bash
-ln -sf /opt/ProjectOverwatch/project-overwatch.AppImage /usr/bin/project-overwatch
-chmod +x /opt/ProjectOverwatch/project-overwatch.AppImage
-update-desktop-database >/dev/null 2>&1 || true
-EOF
+          ln -sf /opt/ProjectOverwatch/project-overwatch.AppImage /usr/bin/project-overwatch
+          chmod +x /opt/ProjectOverwatch/project-overwatch.AppImage
+          update-desktop-database >/dev/null 2>&1 || true
+          EOF
           chmod 755 $DEB_DIR/DEBIAN/postinst
 
           cat <<EOF > $DEB_DIR/usr/share/applications/project-overwatch.desktop
-[Desktop Entry]
-Name=Project Overwatch
-Exec=project-overwatch
-Icon=project-overwatch
-Type=Application
-Categories=Utility;
-EOF
+          [Desktop Entry]
+          Name=Project Overwatch
+          Exec=project-overwatch
+          Icon=project-overwatch
+          Type=Application
+          Categories=Utility;
+          EOF
 
           if [ -f icons/$APP_NAME.png ]; then
             cp icons/$APP_NAME.png $DEB_DIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png
@@ -206,14 +206,14 @@ EOF
           fi
 
           cat <<EOF > $DEB_DIR/DEBIAN/control
-Package: project-overwatch
-Version: 1.0.0
-Section: utils
-Priority: optional
-Architecture: amd64
-Maintainer: Your Company
-Description: Qt-based monitoring application
-EOF
+          Package: project-overwatch
+	  Version: 1.0.0
+	  Section: utils
+	  Priority: optional
+	  Architecture: amd64
+	  Maintainer: Your Company
+	  Description: Qt-based monitoring application
+	  EOF
 
           dpkg-deb --build $DEB_DIR project-overwatch.deb
 
