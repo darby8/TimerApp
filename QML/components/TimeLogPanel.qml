@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import Qt.labs.settings 1.1
+import QtCore
 import QtQuick.Layouts
 import "../script.js" as Script
 import "../pages"
@@ -12,7 +12,10 @@ Rectangle {
     color: Theme.bg
     border.width: 2
     border.color: Theme.borders
-
+    Settings {
+        id: filterSettings
+        property int savedFilterIndexB: 0     // default Today
+    }
     property alias totalTimeText: totalTime.text
     property var logs: []
     property var allLogs: []
@@ -76,10 +79,7 @@ Rectangle {
                 }
 
 
-                Settings {
-                    id: filterSettings
-                    property int savedFilterIndexB: 0     // default Today
-                }
+
 
                 ComboBox {
                     id: dateFilter

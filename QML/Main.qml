@@ -22,6 +22,7 @@ ApplicationWindow {
         property string refreshToken: ""
         property string userId: ""
     }
+
     property bool loggedIn: false
     property var timeLogCache: null
     property var analyticsCache: null
@@ -170,10 +171,11 @@ ApplicationWindow {
                         color: Theme.smalltxt
 
                         Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+                        Layout.alignment: Qt.AlignCenter
 
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
+                        anchors.centerIn: parent
                     }
 
                     // ---------- RIGHT USER BUTTON ----------
@@ -346,6 +348,10 @@ ApplicationWindow {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
+
+                                if (mainWindow.selectedTab === "TimeLog")
+                                        return;
+
                                 mainWindow.selectedTab = "TimeLog"
                                 pageLoader.source = "../QML/pages/TimeLog.qml"
 
@@ -397,8 +403,12 @@ ApplicationWindow {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
+                                if (mainWindow.selectedTab === "Analytics")
+                                        return;
+
                                 mainWindow.selectedTab = "Analytics"
                                 pageLoader.source = "../QML/pages/Analytics.qml"
+
                                 if (mainWindow.analyticsCache) {
                                     console.log("Using cached Analytics data");
                                     if (pageLoader.item) {

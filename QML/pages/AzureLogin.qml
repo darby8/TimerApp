@@ -88,10 +88,6 @@ ApplicationWindow {
         anchors.fill: parent
         profile: liteProfile   // << IMPORTANT: uses low-memory profile
         url: "https://backend-oversight.reak.co.in/api/oauth/azure/login"
-
-        // -----------------------------------------------------------
-        // 🔥 Reduce RAM by disabling unused heavy features
-        // -----------------------------------------------------------
         settings {
             webGLEnabled: false
             accelerated2dCanvasEnabled: false
@@ -99,10 +95,6 @@ ApplicationWindow {
             javascriptCanOpenWindows: true   // REQUIRED for OAuth redirect
             autoLoadImages: true
         }
-
-        // -----------------------------------------------------------
-        // Your login logic (NO CHANGES)
-        // -----------------------------------------------------------
         onLoadingChanged: {
             if (!webview.loading) {
                 webview.runJavaScript("document.body.innerText", function(result) {

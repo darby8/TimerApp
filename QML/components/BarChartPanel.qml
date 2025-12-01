@@ -5,7 +5,8 @@ import QtQuick.Controls
 import QtCharts
 import "../pages"
 Rectangle {
-    width: 550; height: 330
+    width: 550;
+    height: 330
     color: Theme.bg
     radius: 8
     border.color: Theme.borders

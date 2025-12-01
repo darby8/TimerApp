@@ -3,18 +3,24 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
 import QtCharts
-import Qt.labs.settings 1.1
+import QtCore
 import "../components"
 Item {
     id: analytics
     property var activity: []
     property var logs: []
-
+     property bool filterApplied: false
+    Settings {
+        id: filterSettings
+        property int savedFilterIndexA: 0     // default Today
+    }
     Rectangle {
         width: parent.width
         id: headerSection
         // anchors.fill: parent
         z:1000
+        property bool initialized: false
+
         color: Theme.bg
         ColumnLayout {
             id: statsRow
@@ -35,10 +41,7 @@ Item {
                     color: Theme.smalltxt;
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Settings {
-                    id: filterSettings
-                    property int savedFilterIndexA: 0     // default Today
-                }
+
 
                 ComboBox {
                     id: dateFilter
@@ -96,7 +99,7 @@ Item {
           anchors.right: parent.right
           anchors.bottom: parent.bottom
           anchors.margins: 17
-          anchors.rightMargin: 17
+          anchors.rightMargin: 30
           spacing: 12
           anchors.topMargin: 150
 
@@ -123,5 +126,14 @@ Item {
             border.color: Theme.softgray
         }
     }
+
+    onLogsChanged: {
+        if (!filterApplied && logs.length > 0) {
+            dateFilter.currentIndex = 0;  // ✅ select Today
+            dateFilter.applyFilter();     // ✅ filter for today
+            filterApplied = true;         // ✅ prevent re-filtering on future updates
+        }
+    }
+
 }
 
