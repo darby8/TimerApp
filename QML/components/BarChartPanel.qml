@@ -57,8 +57,6 @@ Rectangle {
         }
     }
 
-
-
     function parseDateLocal(dateString) {
         let parts = dateString.split("-");
         return new Date(parts[0], parts[1] - 1, parts[2]); // year, monthIndex, day

@@ -16,7 +16,6 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 10
         spacing: 4
-
         Text {
             text: Theme.category
             font.pointSize: 12
@@ -47,8 +46,6 @@ Rectangle {
             }
         }
     }
-
-
 
     onActivityChanged: {
         updatePieChart(1, 0);  // default: Today
@@ -93,20 +90,6 @@ Rectangle {
             totals[cat] += filtered[i].estimation_of_time_worked_in_mins;
             totalMinutes += filtered[i].estimation_of_time_worked_in_mins;
         }
-
-        // property color colorOrange: "#FFA500"
-        // property color colorPink:   "#EF5DA8"
-        // property color colorTeal:   "#45B8AC"
-        // property color colorBrown:  "#8D5524"
-        // property color colorCyan:   "#00BFAE"
-        // property color colorNavy:   "#205375"
-        // property color colorGray:   "#7D7F7D"
-        // property color colorBeige:  "#FFF3CD"
-
-
-
-
-
         let colors = [Theme.colorBlue, Theme.colorRed, Theme.colorGreen, Theme.colorYellow, Theme.colorPurple, Theme.colorOrange, Theme.colorPink, Theme.colorTeal, Theme.colorBeige, Theme.colorBrown,
                       Theme.colorCyan, Theme.colorNavy, Theme.colorGray
             ];
