@@ -1,7 +1,3 @@
-# UPDATED WORKFLOW WITH SYSTEM-WIDE INSTALLATION
-# Installs to /opt/ProjectOverwatch and desktop entry in /usr/share/applications
-# Full corrected file
-
 name: Linux Qt Build (project-overwatch)
 
 on:
@@ -9,21 +5,27 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  QT_VERSION: 6.5.3
+  BUILD_DIR: build
+  APP_NAME: project-overwatch
+  APP_DIR: AppDir
+  APPIMAGE_EXTRACT_AND_RUN: 1
+
 jobs:
   linux-build:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:20.04
 
-    env:
-      QT_VERSION: 6.5.3
-      BUILD_DIR: build
-      APP_NAME: appproject-overwatch
-      APP_DIR: AppDir
-      APPIMAGE_EXTRACT_AND_RUN: 1
-
     steps:
-      - name: Install Git
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install Git (newer ppa)
         run: |
           apt-get update
           apt-get install -y software-properties-common
@@ -31,13 +33,7 @@ jobs:
           apt-get update
           apt-get install -y git
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Prepare environment
+      - name: Prepare environment (disable tzdata prompts)
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
@@ -45,8 +41,9 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
-      - name: Install dependencies
+      - name: Install base dependencies
         run: |
+          apt-get update
           apt-get install -y \
             build-essential \
             cmake \
@@ -72,22 +69,19 @@ jobs:
             libxkbfile-dev \
             libxtst-dev \
             libxt-dev \
-            libxinerama-dev
+            libxinerama-dev \
+            python3 python3-pip unixodbc unixodbc-dev odbcinst odbcinst1debian2 \
+            libpq-dev libpq5 libmysqlclient-dev
 
-      - name: Install DB libraries
+      - name: Install Python packages (aqt)
         run: |
-          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
-            unixodbc unixodbc-dev odbcinst odbcinst1debian2
-
-      - name: Install Python & aqt
-        run: |
-          apt-get install -y python3 python3-pip
-          pip3 install --upgrade pip
+          python3 -m pip install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
-      - name: Install Qt
+      - name: Install Qt ${{ env.QT_VERSION }}
         run: |
-          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 --outputdir Qt \
+          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
+            --outputdir Qt \
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
@@ -103,31 +97,42 @@ jobs:
       - name: Detect executable
         id: findexe
         run: |
-          EXE=$(find $BUILD_DIR -maxdepth 2 -type f -executable -name "$APP_NAME*" | head -n 1)
+          EXE=$(find $BUILD_DIR -maxdepth 3 -type f -executable -name "${{ env.APP_NAME }}*" | head -n 1)
+          if [ -z "$EXE" ]; then
+            echo "No executable found in $BUILD_DIR"
+            exit 1
+          fi
           echo "EXE=$EXE" >> $GITHUB_ENV
+          echo "Found executable: $EXE"
 
-      - name: Create AppDir
+      - name: Create AppDir and copy exe
         run: |
           mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
-          cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
-          chmod +x $APP_DIR/usr/bin/$APP_NAME
+          cp "$EXE" $APP_DIR/usr/bin/${{ env.APP_NAME }}
+          chmod +x $APP_DIR/usr/bin/${{ env.APP_NAME }}
 
-          if [ -f icons/$APP_NAME.png ]; then
-            cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+          # If you have an icons/ folder with 'app.png' or 'project-overwatch.png' use it; otherwise create a stub icon
+          if [ -f icons/${{ env.APP_NAME }}.png ]; then
+            cp icons/${{ env.APP_NAME }}.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png
+          elif [ -f icons/app.png ]; then
+            cp icons/app.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png
           else
-            convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
+            # create an empty 256x256 png so linuxdeployqt doesn't trip
+            convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png || touch $APP_DIR/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png
           fi
 
-          cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
+          # Create a packaged .desktop used by linuxdeployqt (this will not be the final system .desktop)
+          cat <<EOF > $APP_DIR/usr/share/applications/${{ env.APP_NAME }}.desktop
           [Desktop Entry]
           Name=Project Overwatch
-          Exec=$APP_NAME
-          Icon=$APP_NAME
+          Exec=${{ env.APP_NAME }}
+          Icon=${{ env.APP_NAME }}
           Type=Application
           Categories=Utility;
+          Terminal=false
           EOF
 
-      - name: Download linuxdeploy tools
+      - name: Download linuxdeploy & plugins
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
@@ -138,123 +143,202 @@ jobs:
           wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
           chmod +x linuxdeployqt
 
-      - name: Install QtWebEngine deps
+      - name: Install QtWebEngine runtime deps
         run: |
           apt-get update
-          apt-get install -y libnss3 libnspr4 libxss1 libasound2 libxcomposite1 libxdamage1
+          apt-get install -y libnss3 libnspr4 libxss1 libasound2 libxcomposite1 libxdamage1 locales
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
 
       - name: Build AppImage
         id: appimage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
+          export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
+          export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
 
-          ./linuxdeployqt $APP_DIR/usr/share/applications/$APP_NAME.desktop \
+          ./linuxdeployqt \
+            $APP_DIR/usr/share/applications/${{ env.APP_NAME }}.desktop \
             -qmldir="$GITHUB_WORKSPACE/QML" \
+            -qmake=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin/qmake \
             -bundle-non-qt-libs \
             -appimage
 
           APPIMAGE=$(ls -1t *.AppImage | head -n 1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "No AppImage produced"
+            exit 1
+          fi
           echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
+          echo "Built AppImage: $APPIMAGE"
 
-      - name: Upload AppImage
+      - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-Linux-AppImage
           path: "*.AppImage"
 
-      # =====================================================================
-      # SYSTEM-WIDE INSTALLATION QTIFW
-      # =====================================================================
-
-      - name: Prepare QtIFW Structure (System-wide)
+      - name: Prepare QtIFW package layout (system-wide installer)
         run: |
           mkdir -p installer/input/config
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/meta
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/data
 
-          # SYSTEM-WIDE INSTALL: /opt/ProjectOverwatch
+          echo "Creating QtIFW config files..."
+
+          # Main installer configuration (system-wide install to /opt/project-overwatch)
           cat <<EOF > installer/input/config/config.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
-            <Name>Project Overwatch Installer</Name>
-            <Version>1.0.0</Version>
-            <Title>Project Overwatch</Title>
-            <Publisher>Your Company</Publisher>
-            <StartMenuDir>Project Overwatch</StartMenuDir>
-            <TargetDir>/opt/ProjectOverwatch</TargetDir>
-            <RunProgram>/opt/ProjectOverwatch/project-overwatch.AppImage</RunProgram>
+              <Name>Project Overwatch Installer</Name>
+              <Version>1.0.0</Version>
+              <Title>Project Overwatch</Title>
+              <Publisher>Your Company</Publisher>
+              <StartMenuDir>Project Overwatch</StartMenuDir>
+              <!-- TargetDir is set by the installer script to /opt/project-overwatch (system-wide) -->
+              <RunProgram>/opt/project-overwatch/project-overwatch.AppImage</RunProgram>
           </Installer>
           EOF
 
+          # Package metadata
           cat <<EOF > installer/input/packages/com.yourcompany.projectoverwatch/meta/package.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <Package>
-            <DisplayName>Project Overwatch</DisplayName>
-            <Description>Qt-based monitoring app</Description>
-            <Version>1.0.0</Version>
-            <Default>true</Default>
-            <Script>installscript.qs</Script>
+              <DisplayName>Project Overwatch</DisplayName>
+              <Description>Qt-based monitoring application</Description>
+              <Version>1.0.0</Version>
+              <ReleaseDate>2025-11-13</ReleaseDate>
+              <Default>true</Default>
+              <Script>installscript.qs</Script>
           </Package>
           EOF
 
-          # QtIFW global installer script
+          # System-wide installscript.qs (STRICT MODE: installs to /opt and writes system desktop/icon)
           cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
           function Component() {}
 
           Component.prototype.createOperations = function() {
               component.createOperations();
 
-              var target = "/opt/ProjectOverwatch";
-              var app = target + "/project-overwatch.AppImage";
+              try {
+                  // STRICT system-wide install (Option A)
+                  var targetDir = "/opt/project-overwatch";
+                  installer.setValue("TargetDir", targetDir);
 
-              // Copy AppImage
-              component.addOperation("Copy", installer.value("RootDir") + "/data/project-overwatch.AppImage", app);
-              component.addOperation("Execute", "/bin/chmod", "+x", app);
+                  // Paths
+                  var appSource = installer.value("PackageDir") + "/data/project-overwatch.AppImage";
+                  var appTarget = targetDir + "/project-overwatch.AppImage";
+                  var iconSource = installer.value("PackageDir") + "/data/project-overwatch.png";
+                  var iconTarget = "/usr/share/icons/hicolor/256x256/apps/project-overwatch.png";
+                  var desktopTarget = "/usr/share/applications/project-overwatch.desktop";
 
-              // Create global desktop entry
-              component.addOperation("Copy", installer.value("RootDir") + "/data/project-overwatch.desktop", "/usr/share/applications/project-overwatch.desktop");
+                  // Ensure target dir exists
+                  component.addOperation("Mkdir", targetDir);
 
-              // Symlink globally
-              component.addOperation("Execute", "/bin/ln", "-sf", app, "/usr/bin/project-overwatch");
+                  // Copy AppImage
+                  component.addOperation("Copy", appSource, appTarget);
+
+                  // Make AppImage executable
+                  component.addOperation("Execute", "/bin/chmod", "+x", appTarget);
+
+                  // Copy system icon
+                  component.addOperation("Copy", iconSource, iconTarget);
+
+                  // Create system desktop entry (CreateDesktopEntry operation may behave differently across IFW versions,
+                  // so we write the desktop file directly as a fallback)
+                  var desktopContents = "[Desktop Entry]\n" +
+                                        "Type=Application\n" +
+                                        "Name=Project Overwatch\n" +
+                                        "Exec=" + appTarget + "\n" +
+                                        "Icon=project-overwatch\n" +
+                                        "Categories=Utility;Application;\n" +
+                                        "Terminal=false\n";
+
+                  component.addOperation("WriteFile", desktopTarget, desktopContents);
+
+              } catch (e) {
+                  console.log("INSTALLER ERROR: " + e);
+              }
+          }
+
+          Component.prototype.installationFinished = function() {
+              // Try to run the app once installed (non-blocking)
+              try {
+                  var appPath = "/opt/project-overwatch/project-overwatch.AppImage";
+                  QProcess.startDetached(appPath, []);
+              } catch (e) {
+                  console.log("Unable to auto-start: " + e);
+              }
           }
           EOF
 
+          # Copy the AppImage and icon into the package data
           APPFILE=$(ls -1t *.AppImage | head -n 1)
-          cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
+          if [ -f "$APPFILE" ]; then
+            cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
+            echo "Copied $APPFILE -> installer package data"
+          else
+            echo "No AppImage found to package!"
+            exit 1
+          fi
 
-          cat <<EOF > installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.desktop
-          [Desktop Entry]
-          Name=Project Overwatch
-          Exec=/opt/ProjectOverwatch/project-overwatch.AppImage
-          Icon=project-overwatch
-          Type=Application
-          Categories=Utility;
-          EOF
+          # Ensure icon exists in data (prefer icons/project-overwatch.png or icons/app.png)
+          if [ -f icons/${{ env.APP_NAME }}.png ]; then
+            cp icons/${{ env.APP_NAME }}.png installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.png
+          elif [ -f icons/app.png ]; then
+            cp icons/app.png installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.png
+          else
+            # fallback: create a blank png
+            convert -size 256x256 xc:none installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.png || touch installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.png
+          fi
 
-      - name: Install Qt Installer Framework (QtIFW)
+      - name: Install Qt Installer Framework (ifw) via aqt
         run: |
-          pip install aqtinstall==3.1.18 --root-user-action=ignore
-          echo "Listing available Qt Installer Framework versions..."
+          pip3 install aqtinstall==3.1.18 --root-user-action=ignore
           python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt || true
-          cat ifw_versions.txt || true
-
           IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1 || echo "4.6.1")
-          echo "Detected IFW version: $IFW_VERSION"
-
-          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || \
-          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+          echo "IFW_VERSION=$IFW_VERSION" >> $GITHUB_ENV
+          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
 
       - name: Locate binarycreator
+        id: find_ifw
         run: |
-          IFW_PATH=$(find QtIFW -name binarycreator -type f -exec dirname {} \; | head -n 1)
+          IFW_PATH=$(find "$GITHUB_WORKSPACE/QtIFW" -type f -name binarycreator -exec dirname {} \; | head -n 1 || true)
+          if [ -z "$IFW_PATH" ]; then
+            echo "binarycreator not found under QtIFW folder!"
+            find "$GITHUB_WORKSPACE/QtIFW" -maxdepth 4 -type f
+            exit 1
+          fi
           echo "IFW_PATH=$IFW_PATH" >> $GITHUB_ENV
+          echo "Found binarycreator: $IFW_PATH"
 
-      - name: Build Installer
+      - name: Build GUI Installer (.run)
         run: |
-          $IFW_PATH/binarycreator -c installer/input/config/config.xml -p installer/input/packages project-overwatch-installer.run
+          set -e
+          echo "Using binarycreator at $IFW_PATH/binarycreator"
+          $IFW_PATH/binarycreator \
+            -c installer/input/config/config.xml \
+            -p installer/input/packages \
+            project-overwatch-installer.run
 
-      - name: Upload Installer
+      - name: Upload GUI Installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-GUI-Installer
           path: project-overwatch-installer.run
+
+      - name: Final info
+        run: |
+          echo "===================================="
+          echo "Build and packaging finished."
+          echo "Artifacts:"
+          echo " - AppImage: $(ls -1t *.AppImage | head -n 1 || echo 'none')"
+          echo " - Installer: project-overwatch-installer.run"
+          echo ""
+          echo "IMPORTANT: The produced installer is STRICT system-wide (Option A)."
+          echo "You MUST run the installer as root to install system-wide:"
+          echo "  sudo ./project-overwatch-installer.run"
+          echo "If you run it without sudo, the installer will not be able to write to /opt or /usr/share and will fail."
+          echo "===================================="
 
