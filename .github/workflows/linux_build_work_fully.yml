@@ -1,6 +1,3 @@
-# ✅ Updated Linux Qt Build Workflow (System‑Wide Installer: Option A)
-# This version installs system-wide into /opt and /usr/share and requires sudo.
-
 name: Linux Qt Build (project-overwatch)
 
 on:
@@ -22,6 +19,7 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
+      # ✅ Install Git 2.40+ to avoid REST API fallback
       - name: Install Git
         run: |
           apt-get update
@@ -30,12 +28,14 @@ jobs:
           apt-get update
           apt-get install -y git
 
+      # ✅ Checkout repository with submodules
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
+      # ✅ Prepare environment (disable tzdata prompts)
       - name: Prepare environment
         run: |
           export DEBIAN_FRONTEND=noninteractive
@@ -44,6 +44,7 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
+      # ✅ Install base dependencies
       - name: Install dependencies
         run: |
           apt-get install -y \
@@ -73,17 +74,20 @@ jobs:
             libxt-dev \
             libxinerama-dev
 
+      # ✅ Install database libraries
       - name: Install PostgreSQL/MySQL/ODBC libraries
         run: |
           apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
             unixodbc unixodbc-dev odbcinst odbcinst1debian2
 
+      # ✅ Install Python & aqtinstall
       - name: Install Python & aqt
         run: |
           apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
+      # ✅ Install Qt 6.5.3
       - name: Install Qt ${{ env.QT_VERSION }}
         run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
@@ -91,15 +95,18 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
+      # ✅ Configure CMake
       - name: Configure CMake
         run: |
           cmake -S . -B $BUILD_DIR -G Ninja \
             -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
             -DCMAKE_BUILD_TYPE=Release
 
+      # ✅ Build project
       - name: Build Project
         run: cmake --build $BUILD_DIR --config Release --parallel
 
+      # ✅ Detect built executable
       - name: Detect executable
         id: findexe
         run: |
@@ -107,6 +114,7 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Found executable: $EXE"
 
+      # ✅ Create AppDir structure and handle icon
       - name: Create AppDir
         run: |
           mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
@@ -128,17 +136,20 @@ jobs:
           Categories=Utility;
           EOF
 
-      - name: Download linuxdeploy
+      # ✅ Download linuxdeploy & plugin
+      - name: Download linuxdeploy & plugin
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy*.AppImage
 
+      # ✅ Download linuxdeployqt
       - name: Download linuxdeployqt
         run: |
           wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
           chmod +x linuxdeployqt
 
+      # ✅ Install QtWebEngine runtime dependencies
       - name: Install QtWebEngine runtime dependencies
         run: |
           apt-get update
@@ -153,11 +164,13 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
+      # ✅ Build AppImage and detect file
       - name: Build AppImage
         id: appimage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
           export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
+          export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
           export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
 
           ./linuxdeployqt \
@@ -169,20 +182,25 @@ jobs:
 
           APPIMAGE=$(ls -1t *.AppImage | head -n 1)
           echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
-          echo "Built AppImage: $APPIMAGE"
+          echo "✅ Built AppImage: $APPIMAGE"
 
+      # ✅ Upload AppImage
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-Linux-AppImage
           path: "*.AppImage"
 
-      - name: Prepare QtIFW structure
+
+      - name: Prepare Qt Installer Framework structure
         run: |
           mkdir -p installer/input/config
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/meta
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/data
 
+          echo "🧱 Creating QtIFW config files..."
+
+          # ✅ Main installer configuration
           cat <<EOF > installer/input/config/config.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
@@ -191,11 +209,12 @@ jobs:
               <Title>Project Overwatch</Title>
               <Publisher>Your Company</Publisher>
               <StartMenuDir>Project Overwatch</StartMenuDir>
-              <TargetDir>/opt/project-overwatch</TargetDir>
-              <RunProgram>/opt/project-overwatch/project-overwatch.AppImage</RunProgram>
+              <TargetDir>@HomeDir@/ProjectOverwatch</TargetDir>
+              <RunProgram>@TargetDir@/project-overwatch.AppImage</RunProgram>
           </Installer>
           EOF
 
+          # ✅ Package metadata
           cat <<EOF > installer/input/packages/com.yourcompany.projectoverwatch/meta/package.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Package>
@@ -208,5 +227,111 @@ jobs:
           </Package>
           EOF
 
-          cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.q
+          # ✅ Clean, compatible installer script
+          # ✅ Clean, compatible installer script
+cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
+function Component() {}
+
+Component.prototype.createOperations = function() {
+    component.createOperations();
+
+    try {
+        var targetDir = installer.value("TargetDir");
+
+        // Source files inside the installer
+        var appSource = targetDir + "/project-overwatch.AppImage";
+        var iconSource = targetDir + "/app.png";
+
+        // System install locations
+        var appTarget = "/usr/local/bin/project-overwatch";
+        var iconTarget = "/usr/share/icons/project-overwatch.png";
+        var desktopTarget = "/usr/share/applications/project-overwatch.desktop";
+
+        // Install AppImage into system path
+        component.addOperation("Copy", appSource, appTarget);
+        component.addOperation("Execute", "/bin/chmod", "+x", appTarget);
+
+        // Install app icon globally
+        component.addOperation("Copy", iconSource, iconTarget);
+
+        // Create desktop launcher
+        component.addOperation("WriteFile", desktopTarget,
+            "[Desktop Entry]\n"
+            + "Name=Project Overwatch\n"
+            + "Exec=/usr/local/bin/project-overwatch\n"
+            + "Icon=project-overwatch\n"
+            + "Type=Application\n"
+            + "Terminal=false\n"
+            + "Categories=Utility;\n"
+        );
+
+        // Fix perms
+        component.addOperation("Execute", "/bin/chmod", "644", desktopTarget);
+
+        // Update menu database
+        component.addOperation("Execute", "/usr/bin/update-desktop-database",
+                               "/usr/share/applications");
+
+    } catch (e) {
+        console.log("❌ Installer error: " + e);
+    }
+}
+
+Component.prototype.installationFinished = function() {
+    try {
+        QProcess.startDetached("/usr/local/bin/project-overwatch", []);
+    } catch (e) {
+        console.log("⚠️ Failed to auto-run app: " + e);
+    }
+}
+EOF
+
+
+
+
+
+ 
+      - name: Install Qt Installer Framework (QtIFW)
+        run: |
+          pip install aqtinstall==3.1.18 --root-user-action=ignore
+          echo "Listing available Qt Installer Framework versions..."
+          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt || true
+          cat ifw_versions.txt || true
+
+          IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1 || echo "4.6.1")
+          echo "Detected IFW version: $IFW_VERSION"
+
+          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || \
+          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+
+      # ✅ Detect binarycreator automatically
+      - name: Fix IFW path detection
+        run: |
+          echo "🔍 Searching for binarycreator..."
+          IFW_PATH=$(find "$GITHUB_WORKSPACE/QtIFW" -type f -name binarycreator -exec dirname {} \; | head -n 1)
+          if [ -z "$IFW_PATH" ]; then
+            echo "❌ binarycreator not found under QtIFW folder!"
+            find "$GITHUB_WORKSPACE/QtIFW" -maxdepth 4 -type d
+            exit 1
+          fi
+          echo "✅ Found binarycreator at: $IFW_PATH"
+          echo "IFW_PATH=$IFW_PATH" >> $GITHUB_ENV
+
+
+
+
+      # ✅ Build GUI Installer (.run file)
+      - name: Build GUI Installer
+        run: |
+          $IFW_PATH/binarycreator \
+            -c installer/input/config/config.xml \
+            -p installer/input/packages \
+            project-overwatch-installer.run
+
+      # ✅ Upload GUI Installer
+      - name: Upload GUI Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-overwatch-GUI-Installer
+          path: project-overwatch-installer.run
 
