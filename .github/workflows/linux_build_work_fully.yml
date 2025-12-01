@@ -1,6 +1,3 @@
-# Updated Linux Qt Build Workflow with Global Install Support
-# (Project Overwatch)
-
 name: Linux Qt Build (project-overwatch)
 
 on:
@@ -168,6 +165,67 @@ jobs:
         with:
           name: project-overwatch-Linux-AppImage
           path: "*.AppImage"
+
+      ##################################################################
+      #                     ADDED: BUILD .deb PACKAGE                  #
+      ##################################################################
+
+      - name: Build .deb package
+        run: |
+          DEB_DIR=deb_pkg
+          mkdir -p $DEB_DIR/DEBIAN
+          mkdir -p $DEB_DIR/opt/ProjectOverwatch
+          mkdir -p $DEB_DIR/usr/bin
+          mkdir -p $DEB_DIR/usr/share/applications
+          mkdir -p $DEB_DIR/usr/share/icons/hicolor/256x256/apps
+
+          cp "$APPIMAGE" $DEB_DIR/opt/ProjectOverwatch/project-overwatch.AppImage
+          chmod 755 $DEB_DIR/opt/ProjectOverwatch/project-overwatch.AppImage
+
+          cat <<EOF > $DEB_DIR/DEBIAN/postinst
+#!/bin/bash
+ln -sf /opt/ProjectOverwatch/project-overwatch.AppImage /usr/bin/project-overwatch
+chmod +x /opt/ProjectOverwatch/project-overwatch.AppImage
+update-desktop-database >/dev/null 2>&1 || true
+EOF
+          chmod 755 $DEB_DIR/DEBIAN/postinst
+
+          cat <<EOF > $DEB_DIR/usr/share/applications/project-overwatch.desktop
+[Desktop Entry]
+Name=Project Overwatch
+Exec=project-overwatch
+Icon=project-overwatch
+Type=Application
+Categories=Utility;
+EOF
+
+          if [ -f icons/$APP_NAME.png ]; then
+            cp icons/$APP_NAME.png $DEB_DIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png
+          else
+            convert -size 256x256 xc:none $DEB_DIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png || true
+          fi
+
+          cat <<EOF > $DEB_DIR/DEBIAN/control
+Package: project-overwatch
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Your Company
+Description: Qt-based monitoring application
+EOF
+
+          dpkg-deb --build $DEB_DIR project-overwatch.deb
+
+      - name: Upload .deb Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-overwatch-deb
+          path: project-overwatch.deb
+
+      ##################################################################
+      #                 ORIGINAL QtIFW INSTALLER SECTION                #
+      ##################################################################
 
       - name: Prepare Qt Installer Framework structure
         run: |
