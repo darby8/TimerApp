@@ -233,41 +233,54 @@ jobs:
 
               try {
                   var targetDir = installer.value("TargetDir");
-                  var appPath = targetDir + "/project-overwatch.AppImage";
+        	  var appPath = targetDir + "/project-overwatch.AppImage";
 
-                  // Make AppImage executable
-                  component.addOperation("Execute", "/bin/chmod", "+x", appPath);
+         	  // Ensure AppImage is executable
+        	  component.addOperation("Execute", "/bin/chmod", "+x", appPath);
 
-                  // Create a .desktop entry
-                  var desktopFile = targetDir + "/project-overwatch.desktop";
-                  component.addOperation("CreateDesktopEntry", desktopFile, appPath);
+        	  // Create a valid ~/.local/share/applications/ desktop entry
+        	  var user = installer.value("Username");
+        	  var desktopFile = "/home/" + user + "/.local/share/applications/project-overwatch.desktop";
 
-              } catch (e) {
+                  component.addOperation(
+                      "WriteFile",
+                      desktopFile,
+                       [
+                          "[Desktop Entry]",
+                	  "Name=Project Overwatch",
+                	  "Exec=" + appPath,
+                	  "Icon=project-overwatch",
+                	  "Type=Application",
+		          "Categories=Utility;",
+		          "Terminal=false"
+                      ].join("\n"),
+                      "overwrite=true"
+                  );
+
+                  // Install icon (256x256)
+		  var iconTarget = "/home/" + user + "/.local/share/icons/hicolor/256x256/apps/project-overwatch.png";
+		  component.addOperation("Copy", "@TargetDir@/project-overwatch.png", iconTarget);
+
+                  // Update db
+                  component.addOperation("ExecuteDetached",
+                      "/usr/bin/update-desktop-database",
+                      "/home/" + user + "/.local/share/applications"
+                  );
+
+               } catch (e) {
                   console.log("❌ Installer error: " + e);
               }
           }
 
-          // ✅ Run app automatically after installation
           Component.prototype.installationFinished = function() {
               try {
-                  var targetDir = installer.value("TargetDir");
-                  var appPath = targetDir + "/project-overwatch.AppImage";
+                  var appPath = installer.value("TargetDir") + "/project-overwatch.AppImage";
                   QProcess.startDetached(appPath, []);
               } catch (e) {
-                  console.log("⚠️ Failed to auto-run app: " + e);
+                  console.log("⚠️ Failed to auto-run " + e);
               }
           }
-          EOF
 
-          # ✅ Copy AppImage automatically and rename consistently
-          APPFILE=$(ls -1t *.AppImage | head -n 1)
-          if [ -f "$APPFILE" ]; then
-            cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
-            echo "✅ Copied $APPFILE -> project-overwatch.AppImage"
-          else
-            echo "⚠️ No AppImage found!"
-            exit 1
-          fi
 
 
       - name: Install Qt Installer Framework (QtIFW)
