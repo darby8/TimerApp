@@ -1,4 +1,4 @@
-name: Build Linux .deb (project-overwatch)
+name: Linux Qt Build (project-overwatch)
 
 on:
   push:
@@ -6,45 +6,84 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-deb:
+  linux-build:
     runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+      options: --user root   # IMPORTANT FIX for apt-get permission
 
     env:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
-      APP_NAME: project-overwatch
+      APP_NAME: appproject-overwatch
+      APP_DIR: AppDir
+      APPIMAGE_EXTRACT_AND_RUN: 1
       PACKAGE_NAME: project-overwatch
       PACKAGE_VERSION: 1.0.0
       ARCH: amd64
       APP_INSTALL_DIR: /opt/project-overwatch
-      APPDIR: AppDir
 
     steps:
+      # Install Git
+      - name: Install Git
+        run: |
+          apt-get update
+          apt-get install -y software-properties-common
+          add-apt-repository ppa:git-core/ppa -y
+          apt-get update
+          apt-get install -y git
+
       # Checkout repository
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # Install build dependencies
+      # Prepare environment
+      - name: Prepare environment
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y tzdata locales
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
+
+      # Install dependencies
       - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y build-essential cmake ninja-build patchelf wget curl imagemagick \
+          apt-get install -y \
+            build-essential cmake ninja-build patchelf wget curl imagemagick \
             libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev \
             libxkbcommon-dev libxkbcommon-x11-dev libglib2.0-0 libglib2.0-dev \
-            libdbus-1-dev libfontconfig1-dev libxcb1-dev libx11-xcb-dev \
-            libxtst-dev libxinerama-dev python3 python3-pip fakeroot dpkg-dev
+            libdbus-1-dev libfontconfig1-dev \
+            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
+            libxrender1 libxrandr2 libegl1 libglu1-mesa \
+            libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
+            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
+            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
+            libx11-xcb-dev libxkbfile-dev libxtst-dev libxt-dev libxinerama-dev
 
-      # Install Qt using aqtinstall
-      - name: Install Qt
+      # Database libs
+      - name: Install PostgreSQL/MySQL/ODBC libraries
         run: |
+          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
+            unixodbc unixodbc-dev odbcinst odbcinst1debian2
+
+      # Python & AQT
+      - name: Install Python & aqt
+        run: |
+          apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
+
+      # Install Qt
+      - name: Install Qt ${{ env.QT_VERSION }}
+        run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
             --outputdir Qt \
-            --modules qtcharts qtmultimedia qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning \
+              qtwebchannel qtwebengine qtwebview qtserialport
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
       # Configure CMake
@@ -54,7 +93,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
             -DCMAKE_BUILD_TYPE=Release
 
-      # Build
+      # Build project
       - name: Build Project
         run: cmake --build $BUILD_DIR --config Release --parallel
 
@@ -68,67 +107,38 @@ jobs:
             exit 1
           fi
           echo "EXE=$EXE" >> $GITHUB_ENV
+          echo "Found executable: $EXE"
 
-      # Prepare AppDir
-      - name: Prepare AppDir
-        run: |
-          mkdir -p $APPDIR/usr/bin
-          mkdir -p $APPDIR/usr/share/applications
-          mkdir -p $APPDIR/usr/share/icons/hicolor/256x256/apps
-          cp "$EXE" $APPDIR/usr/bin/$APP_NAME
-          chmod +x $APPDIR/usr/bin/$APP_NAME
-
-      # Desktop entry
-      - name: Create desktop entry
-        run: |
-          cat <<EOF > $APPDIR/usr/share/applications/$APP_NAME.desktop
-          [Desktop Entry]
-          Name=Project Overwatch
-          Exec=/opt/project-overwatch/$APP_NAME
-          Icon=project-overwatch
-          Type=Application
-          Categories=Utility;
-          EOF
-
-      # Application icon
-      - name: Add application icon
-        run: |
-          if [ -f icons/$APP_NAME.png ]; then
-            cp icons/$APP_NAME.png $APPDIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png
-          else
-            convert -size 256x256 xc:none $APPDIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png
-          fi
-
-      # Download linuxdeployqt
-      - name: Download linuxdeployqt
-        run: |
-          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
-          chmod +x linuxdeployqt
-
-      # Bundle Qt libraries
-      - name: Bundle Qt libraries
-        run: |
-          ./linuxdeployqt \
-            $APPDIR/usr/share/applications/$APP_NAME.desktop \
-            -qmldir=$GITHUB_WORKSPACE/QML \
-            -qmake=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin/qmake \
-            -bundle-non-qt-libs
-
-      # Create DEB structure
-      - name: Create DEB package
+      # -----------------------------
+      #        CREATE .DEB PACKAGE
+      # -----------------------------
+      - name: Create DEB structure
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           rm -rf "$PKG_DIR"
-          mkdir -p "$PKG_DIR/DEBIAN" "$PKG_DIR$APP_INSTALL_DIR" "$PKG_DIR/usr/bin" "$PKG_DIR/usr/share/applications" "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
+          mkdir -p "$PKG_DIR/DEBIAN"
+          mkdir -p "$PKG_DIR$APP_INSTALL_DIR"
+          mkdir -p "$PKG_DIR/usr/bin"
+          mkdir -p "$PKG_DIR/usr/share/applications"
+          mkdir -p "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
 
-          # Copy AppDir contents
-          cp -r $GITHUB_WORKSPACE/AppDir/usr/bin/* "$PKG_DIR$APP_INSTALL_DIR/"
-          cp -r $GITHUB_WORKSPACE/AppDir/usr/share/applications/* "$PKG_DIR/usr/share/applications/"
-          cp -r $GITHUB_WORKSPACE/AppDir/usr/share/icons/hicolor/256x256/apps/* "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/"
+          cp "$EXE" "$PKG_DIR$APP_INSTALL_DIR/$APP_NAME"
+          chmod 755 "$PKG_DIR$APP_INSTALL_DIR/$APP_NAME"
 
-          chmod -R 755 "$PKG_DIR$APP_INSTALL_DIR"
+          # Desktop file
+          cat <<EOF > "$PKG_DIR/usr/share/applications/$APP_NAME.desktop"
+          [Desktop Entry]
+          Name=Project Overwatch
+          Exec=/opt/project-overwatch/$APP_NAME
+          Type=Application
+          Icon=project-overwatch
+          Categories=Utility;
+          EOF
 
-          #### CONTROL FILE ####
+          # Generate blank icon if missing
+          convert -size 256x256 xc:none "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png"
+
+          # Control file
           cat <<EOF > "$PKG_DIR/DEBIAN/control"
           Package: project-overwatch
           Version: 1.0.0
@@ -136,42 +146,32 @@ jobs:
           Priority: optional
           Architecture: amd64
           Maintainer: Your Name <you@example.com>
-          Description: Project Overwatch - Qt-based monitoring application
-          Depends: libglib2.0-0, libglu1-mesa, libx11-6, libxcb1
+          Description: Project Overwatch Qt Application
+          Depends: libglib2.0-0, libx11-6, libglu1-mesa
           EOF
 
-          #### POSTINST ####
-          cat <<EOF > "$PKG_DIR/DEBIAN/postinst"
-          #!/bin/sh
+          # Post-installation script
+          cat <<'EOF' > "$PKG_DIR/DEBIAN/postinst"
+#!/bin/sh
           set -e
-          ln -sf /opt/project-overwatch/$APP_NAME /usr/bin/$APP_NAME
-          chmod +x /opt/project-overwatch/$APP_NAME
+          ln -sf /opt/project-overwatch/appproject-overwatch /usr/bin/appproject-overwatch
+          chmod +x /opt/project-overwatch/appproject-overwatch
           update-desktop-database || true
           exit 0
           EOF
+
           chmod 755 "$PKG_DIR/DEBIAN/postinst"
 
-          #### PRERM ####
-          cat <<EOF > "$PKG_DIR/DEBIAN/prerm"
-          #!/bin/sh
-          set -e
-          if [ -L /usr/bin/$APP_NAME ]; then
-            rm -f /usr/bin/$APP_NAME
-          fi
-          exit 0
-          EOF
-          chmod 755 "$PKG_DIR/DEBIAN/prerm"
-
-
-      # Build the .deb
       - name: Build .deb
         run: |
-          fakeroot dpkg-deb --build deb_build project-overwatch_1.0.0_amd64.deb
+          OUTPUT_DEB=$GITHUB_WORKSPACE/project-overwatch_1.0.0_amd64.deb
+          fakeroot dpkg-deb --build deb_build "$OUTPUT_DEB"
+          echo "DEB=$OUTPUT_DEB" >> $GITHUB_ENV
+          ls -lh "$OUTPUT_DEB"
 
-      # Upload .deb artifact
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-deb
-          path: project-overwatch_1.0.0_amd64.deb
+          path: ${{ env.DEB }}
 
