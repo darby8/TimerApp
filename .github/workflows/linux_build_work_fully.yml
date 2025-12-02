@@ -1,5 +1,4 @@
 name: Build Linux .deb (project-overwatch)
-
 on:
   push:
     branches: [ main ]
@@ -68,7 +67,7 @@ jobs:
           fi
           echo "EXE=$EXE" >> $GITHUB_ENV
 
-      # Prepare AppDir for linuxdeployqt
+      # Prepare AppDir for packaging
       - name: Prepare AppDir
         run: |
           APPDIR=$GITHUB_WORKSPACE/AppDir
@@ -93,13 +92,13 @@ EOF
             convert -size 256x256 xc:none $APPDIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png || touch $APPDIR/usr/share/icons/hicolor/256x256/apps/project-overwatch.png
           fi
 
-      # Download linuxdeployqt
+      # Download linuxdeployqt to bundle Qt libraries
       - name: Download linuxdeployqt
         run: |
           wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
           chmod +x linuxdeployqt
 
-      # Bundle Qt libraries
+      # Bundle Qt libraries into AppDir
       - name: Bundle Qt libraries
         run: |
           APPDIR=$GITHUB_WORKSPACE/AppDir
@@ -123,8 +122,8 @@ EOF
 
           chmod -R 755 "$PKG_DIR$APP_INSTALL_DIR/$APP_NAME"
 
-          # Postinst
-          cat > "$PKG_DIR/DEBIAN/postinst" <<'EOF'
+          # Postinst script
+          cat <<'EOF' > "$PKG_DIR/DEBIAN/postinst"
 #!/bin/sh
 set -e
 ln -sf /opt/project-overwatch/appproject-overwatch /usr/bin/appproject-overwatch
@@ -133,8 +132,8 @@ update-desktop-database || true
 exit 0
 EOF
 
-          # Prerm
-          cat > "$PKG_DIR/DEBIAN/prerm" <<'EOF'
+          # Prerm script
+          cat <<'EOF' > "$PKG_DIR/DEBIAN/prerm"
 #!/bin/sh
 set -e
 if [ -L /usr/bin/appproject-overwatch ]; then
@@ -146,7 +145,7 @@ EOF
           chmod 755 "$PKG_DIR/DEBIAN/postinst" "$PKG_DIR/DEBIAN/prerm"
 
           # Control file
-          cat > "$PKG_DIR/DEBIAN/control" <<EOF
+          cat <<EOF > "$PKG_DIR/DEBIAN/control"
 Package: project-overwatch
 Version: 1.0.0
 Section: utils
@@ -165,8 +164,8 @@ EOF
           echo "DEB=$OUTPUT_DEB" >> $GITHUB_ENV
           ls -lh "$OUTPUT_DEB"
 
-      # Upload .deb
-      - name: Upload .deb artifact
+      # Upload .deb artifact
+      - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-deb
