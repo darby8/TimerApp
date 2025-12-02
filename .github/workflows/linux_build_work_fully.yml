@@ -259,7 +259,7 @@ jobs:
       - name: Install Qt Installer Framework (QtIFW)
         run: |
           pip install aqtinstall==3.1.18 --root-user-action=ignore
-          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+          python3 -m aqt install-tool linux desktop tools_ifw --outputdir QtIFW
 
       - name: Detect binarycreator
         run: |
