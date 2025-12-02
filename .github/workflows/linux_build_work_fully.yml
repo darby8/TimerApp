@@ -209,7 +209,28 @@ jobs:
           find "$PKG_DIR" -type f -exec chmod 644 {} \;
           chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
 
-      # Build .deb package
+
+      - name: Fix .deb package permissions
+        run: |
+          PKG_DIR=${GITHUB_WORKSPACE}/deb_build
+
+          echo "Fixing directory permissions..."
+          find "$PKG_DIR" -type d -exec chmod 755 {} \;
+
+    	  echo "Fixing file permissions except maintainer scripts..."
+    	  find "$PKG_DIR" -type f ! -name postinst ! -name prerm -exec chmod 644 {} \;
+
+	  echo "Making maintainer scripts executable..."
+	  chmod 755 "$PKG_DIR/DEBIAN/postinst"
+	  chmod 755 "$PKG_DIR/DEBIAN/prerm"
+
+	  echo "Making main binary executable..."
+	  chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
+
+
+
+
+
       - name: Build .deb
         run: |
           set -e
@@ -218,6 +239,8 @@ jobs:
           fakeroot dpkg-deb --build "$PKG_DIR" "$OUTPUT_DEB"
           ls -lah "$OUTPUT_DEB"
           echo "DEB=$OUTPUT_DEB" >> $GITHUB_ENV
+          
+          
 
       # Run a quick lintian check (optional)
       - name: Lint .deb (optional)
