@@ -115,7 +115,7 @@ jobs:
             -bundle-non-qt-libs
 
       # Create DEB structure
-            - name: Create DEB package
+      - name: Create DEB package
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           rm -rf "$PKG_DIR"
