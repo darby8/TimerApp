@@ -115,51 +115,53 @@ jobs:
             -bundle-non-qt-libs
 
       # Create DEB structure
-      - name: Create DEB package structure
+            - name: Create DEB package
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           rm -rf "$PKG_DIR"
-          mkdir -p "$PKG_DIR$APP_INSTALL_DIR" "$PKG_DIR/usr/share/applications" "$PKG_DIR/usr/share/icons/hicolor/256x256/apps" "$PKG_DIR/DEBIAN"
+          mkdir -p "$PKG_DIR/DEBIAN" "$PKG_DIR$APP_INSTALL_DIR" "$PKG_DIR/usr/bin" "$PKG_DIR/usr/share/applications" "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
 
           # Copy AppDir contents
-          cp -r $APPDIR/usr/bin/* "$PKG_DIR$APP_INSTALL_DIR/"
-          cp -r $APPDIR/usr/share/applications/* "$PKG_DIR/usr/share/applications/"
-          cp -r $APPDIR/usr/share/icons/hicolor/256x256/apps/* "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/"
-          chmod -R 755 "$PKG_DIR$APP_INSTALL_DIR/$APP_NAME"
+          cp -r $GITHUB_WORKSPACE/AppDir/usr/bin/* "$PKG_DIR$APP_INSTALL_DIR/"
+          cp -r $GITHUB_WORKSPACE/AppDir/usr/share/applications/* "$PKG_DIR/usr/share/applications/"
+          cp -r $GITHUB_WORKSPACE/AppDir/usr/share/icons/hicolor/256x256/apps/* "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/"
 
-          # DEBIAN control file
-          cat > "$PKG_DIR/DEBIAN/control" <<EOF
-Package: project-overwatch
-Version: 1.0.0
-Section: utils
-Priority: optional
-Architecture: amd64
-Maintainer: Your Name <you@example.com>
-Description: Project Overwatch - Qt-based monitoring application
-Depends: libglib2.0-0, libglu1-mesa, libx11-6, libxcb1
-EOF
+          chmod -R 755 "$PKG_DIR$APP_INSTALL_DIR"
 
-          # Postinst script
-          cat > "$PKG_DIR/DEBIAN/postinst" <<'EOF'
-#!/bin/sh
-set -e
-ln -sf /opt/project-overwatch/project-overwatch /usr/bin/project-overwatch
-chmod +x /opt/project-overwatch/project-overwatch
-update-desktop-database || true
-exit 0
-EOF
+          #### CONTROL FILE ####
+          cat <<EOF > "$PKG_DIR/DEBIAN/control"
+          Package: project-overwatch
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Your Name <you@example.com>
+          Description: Project Overwatch - Qt-based monitoring application
+          Depends: libglib2.0-0, libglu1-mesa, libx11-6, libxcb1
+          EOF
 
-          # Prerm script
-          cat > "$PKG_DIR/DEBIAN/prerm" <<'EOF'
-#!/bin/sh
-set -e
-if [ -L /usr/bin/project-overwatch ]; then
-  rm -f /usr/bin/project-overwatch
-fi
-exit 0
-EOF
+          #### POSTINST ####
+          cat <<EOF > "$PKG_DIR/DEBIAN/postinst"
+          #!/bin/sh
+          set -e
+          ln -sf /opt/project-overwatch/$APP_NAME /usr/bin/$APP_NAME
+          chmod +x /opt/project-overwatch/$APP_NAME
+          update-desktop-database || true
+          exit 0
+          EOF
+          chmod 755 "$PKG_DIR/DEBIAN/postinst"
 
-          chmod 755 "$PKG_DIR/DEBIAN/postinst" "$PKG_DIR/DEBIAN/prerm"
+          #### PRERM ####
+          cat <<EOF > "$PKG_DIR/DEBIAN/prerm"
+          #!/bin/sh
+          set -e
+          if [ -L /usr/bin/$APP_NAME ]; then
+            rm -f /usr/bin/$APP_NAME
+          fi
+          exit 0
+          EOF
+          chmod 755 "$PKG_DIR/DEBIAN/prerm"
+
 
       # Build the .deb
       - name: Build .deb
