@@ -81,14 +81,14 @@ jobs:
       # Desktop entry
       - name: Create desktop entry
         run: |
-          cat > $APPDIR/usr/share/applications/$APP_NAME.desktop <<EOF
-[Desktop Entry]
-Name=Project Overwatch
-Exec=/opt/project-overwatch/$APP_NAME
-Icon=project-overwatch
-Type=Application
-Categories=Utility;
-EOF
+          cat <<EOF > $APPDIR/usr/share/applications/$APP_NAME.desktop
+          [Desktop Entry]
+          Name=Project Overwatch
+          Exec=/opt/project-overwatch/$APP_NAME
+          Icon=project-overwatch
+          Type=Application
+          Categories=Utility;
+          EOF
 
       # Application icon
       - name: Add application icon
