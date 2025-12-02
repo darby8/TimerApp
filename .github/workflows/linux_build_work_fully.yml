@@ -38,17 +38,32 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get update
           apt-get install -y \
-            build-essential cmake ninja-build \
-            wget curl patchelf imagemagick \
-            libgl1-mesa-dev libglu1-mesa-dev \
-            libxkbcommon-x11-dev libxkbcommon-dev \
-            libdbus-1-dev libfontconfig1-dev \
-            libglib2.0-dev libglib2.0-0 \
-            libnss3 libnspr4 libasound2 \
-            libxss1 libxcomposite1 libxdamage1 \
-            locales  libxtst-dev
+            build-essential \
+            cmake \
+            ninja-build \
+            patchelf \
+            wget \
+            curl \
+            imagemagick \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libegl1-mesa-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libglib2.0-0 libglib2.0-dev \
+            libdbus-1-dev \
+            libfontconfig1-dev \
+            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
+            libxrender1 libxrandr2 libegl1 libglu1-mesa \
+            libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
+            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
+            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
+            libx11-xcb-dev \
+            libxkbfile-dev \
+            libxtst-dev \
+            libxt-dev \
+            libxinerama-dev
 
       - name: Install Python & aqtinstall
         run: |
