@@ -15,6 +15,7 @@ jobs:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
       APP_NAME: appproject-overwatch
+      APP_ID: appproject-overwatch
       APP_DIR: AppDir
       APPIMAGE_EXTRACT_AND_RUN: 1
 
@@ -134,7 +135,10 @@ jobs:
           Icon=$APP_NAME
           Type=Application
           Categories=Utility;
+          Terminal=false
           EOF
+          
+          chmod 644 $APP_DIR/usr/share/applications/$APP_NAME.desktop
 
       # ✅ Download linuxdeploy & plugin
       - name: Download linuxdeploy & plugin
@@ -184,13 +188,6 @@ jobs:
           echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
           echo "✅ Built AppImage: $APPIMAGE"
 
-      # ✅ Upload AppImage
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-overwatch-Linux-AppImage
-          path: "*.AppImage"
-
 
       - name: Prepare Qt Installer Framework structure
         run: |
@@ -228,69 +225,51 @@ jobs:
           EOF
 
           # ✅ Clean, compatible installer script
-          # ✅ Clean, compatible installer script
-cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
-function Component() {}
+          cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
+          function Component() {}
 
-Component.prototype.createOperations = function() {
-    component.createOperations();
+          Component.prototype.createOperations = function() {
+              component.createOperations();
 
-    try {
-        var targetDir = installer.value("TargetDir");
+              try {
+                  var targetDir = installer.value("TargetDir");
+                  var appPath = targetDir + "/project-overwatch.AppImage";
 
-        // Source files inside the installer
-        var appSource = targetDir + "/project-overwatch.AppImage";
-        var iconSource = targetDir + "/app.png";
+                  // Make AppImage executable
+                  component.addOperation("Execute", "/bin/chmod", "+x", appPath);
 
-        // System install locations
-        var appTarget = "/usr/local/bin/project-overwatch";
-        var iconTarget = "/usr/share/icons/project-overwatch.png";
-        var desktopTarget = "/usr/share/applications/project-overwatch.desktop";
+                  // Create a .desktop entry
+                  var desktopFile = targetDir + "/project-overwatch.desktop";
+                  component.addOperation("CreateDesktopEntry", desktopFile, appPath);
 
-        // Install AppImage into system path
-        component.addOperation("Copy", appSource, appTarget);
-        component.addOperation("Execute", "/bin/chmod", "+x", appTarget);
+              } catch (e) {
+                  console.log("❌ Installer error: " + e);
+              }
+          }
 
-        // Install app icon globally
-        component.addOperation("Copy", iconSource, iconTarget);
+          // ✅ Run app automatically after installation
+          Component.prototype.installationFinished = function() {
+              try {
+                  var targetDir = installer.value("TargetDir");
+                  var appPath = targetDir + "/project-overwatch.AppImage";
+                  QProcess.startDetached(appPath, []);
+              } catch (e) {
+                  console.log("⚠️ Failed to auto-run app: " + e);
+              }
+          }
+          EOF
 
-        // Create desktop launcher
-        component.addOperation("WriteFile", desktopTarget,
-            "[Desktop Entry]\n"
-            + "Name=Project Overwatch\n"
-            + "Exec=/usr/local/bin/project-overwatch\n"
-            + "Icon=project-overwatch\n"
-            + "Type=Application\n"
-            + "Terminal=false\n"
-            + "Categories=Utility;\n"
-        );
-
-        // Fix perms
-        component.addOperation("Execute", "/bin/chmod", "644", desktopTarget);
-
-        // Update menu database
-        component.addOperation("Execute", "/usr/bin/update-desktop-database",
-                               "/usr/share/applications");
-
-    } catch (e) {
-        console.log("❌ Installer error: " + e);
-    }
-}
-
-Component.prototype.installationFinished = function() {
-    try {
-        QProcess.startDetached("/usr/local/bin/project-overwatch", []);
-    } catch (e) {
-        console.log("⚠️ Failed to auto-run app: " + e);
-    }
-}
-EOF
+          # ✅ Copy AppImage automatically and rename consistently
+          APPFILE=$(ls -1t *.AppImage | head -n 1)
+          if [ -f "$APPFILE" ]; then
+            cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
+            echo "✅ Copied $APPFILE -> project-overwatch.AppImage"
+          else
+            echo "⚠️ No AppImage found!"
+            exit 1
+          fi
 
 
-
-
-
- 
       - name: Install Qt Installer Framework (QtIFW)
         run: |
           pip install aqtinstall==3.1.18 --root-user-action=ignore
