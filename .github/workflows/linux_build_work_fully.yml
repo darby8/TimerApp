@@ -124,7 +124,9 @@ jobs:
             -qmldir="$GITHUB_WORKSPACE/QML" \
             -qmake=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin/qmake \
             -bundle-non-qt-libs \
-            -appimage-extract-and-run
+            -appimage-extract
+
+          chmod +x appproject-overwatch.AppImage
 
           APPIMAGE=$(ls -1t *.AppImage | head -n 1)
           mv "$APPIMAGE" "appproject-overwatch.AppImage"
