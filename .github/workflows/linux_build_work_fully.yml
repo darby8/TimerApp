@@ -251,9 +251,10 @@ jobs:
           fi
 
       # Upload .deb artifact
-      - name: Upload .deb
+      - name: Upload .deb package
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-deb
-          path: "${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb"
+          path: ${{ env.DEB }}
+
 
