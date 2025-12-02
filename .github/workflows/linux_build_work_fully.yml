@@ -15,13 +15,13 @@ jobs:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
       APP_NAME: appproject-overwatch
-      APP_ID: appproject-overwatch
       APP_DIR: AppDir
-      APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
-
-      - name: Install Git >= 2.40
+      # ----------------------------
+      # Install Git >= 2.40
+      # ----------------------------
+      - name: Install Git
         run: |
           apt-get update
           apt-get install -y software-properties-common
@@ -29,12 +29,18 @@ jobs:
           apt-get update
           apt-get install -y git
 
+      # ----------------------------
+      # Checkout repository
+      # ----------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
+      # ----------------------------
+      # Prepare environment
+      # ----------------------------
       - name: Prepare environment
         run: |
           export DEBIAN_FRONTEND=noninteractive
@@ -43,63 +49,64 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
+      # ----------------------------
+      # Install build dependencies
+      # ----------------------------
       - name: Install dependencies
         run: |
-          apt-get install -y \
-            build-essential \
-            cmake \
-            ninja-build \
-            patchelf \
-            wget \
-            curl \
-            imagemagick \
-            libgl1-mesa-dev \
-            libglu1-mesa-dev \
-            libegl1-mesa-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            libglib2.0-0 libglib2.0-dev \
-            libdbus-1-dev \
-            libfontconfig1-dev \
-            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
-            libxrender1 libxrandr2 libegl1 libglu1-mesa \
+          apt-get install -y build-essential cmake ninja-build patchelf \
+            wget curl imagemagick libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libglib2.0-0 libglib2.0-dev \
+            libdbus-1-dev libfontconfig1-dev libxcb-cursor0 libxcb-xinerama0 \
+            libxcb-util1 libx11-xcb1 libxrender1 libxrandr2 libegl1 libglu1-mesa \
             libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
-            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
-            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
-            libx11-xcb-dev \
-            libxkbfile-dev \
-            libxtst-dev \
-            libxt-dev \
-            libxinerama-dev
+            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 libxcb-randr0 \
+            libxcb-xinerama0 libxcb-cursor0 libxcb1-dev libx11-xcb-dev libxkbfile-dev \
+            libxtst-dev libxt-dev libxinerama-dev
 
       - name: Install PostgreSQL/MySQL/ODBC
         run: |
-          apt-get install -y \
-            libpq-dev libpq5 libmysqlclient-dev \
+          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
             unixodbc unixodbc-dev odbcinst odbcinst1debian2
 
+      # ----------------------------
+      # Install Python & aqt
+      # ----------------------------
       - name: Install Python & aqt
         run: |
           apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
+      # ----------------------------
+      # Install Qt
+      # ----------------------------
       - name: Install Qt ${{ env.QT_VERSION }}
         run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
             --outputdir Qt \
-            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning \
+                      qtwebchannel qtwebengine qtwebview qtserialport
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
+      # ----------------------------
+      # Configure CMake
+      # ----------------------------
       - name: Configure CMake
         run: |
           cmake -S . -B $BUILD_DIR -G Ninja \
             -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
             -DCMAKE_BUILD_TYPE=Release
 
+      # ----------------------------
+      # Build Project
+      # ----------------------------
       - name: Build Project
         run: cmake --build $BUILD_DIR --config Release --parallel
 
+      # ----------------------------
+      # Detect executable
+      # ----------------------------
       - name: Detect executable
         id: findexe
         run: |
@@ -107,6 +114,9 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Found executable: $EXE"
 
+      # ----------------------------
+      # Create AppDir and handle icon/desktop
+      # ----------------------------
       - name: Create AppDir
         run: |
           mkdir -p $APP_DIR/usr/bin \
@@ -116,12 +126,8 @@ jobs:
           cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
           chmod +x $APP_DIR/usr/bin/$APP_NAME
 
-          # Icon handling
-          if [ -f icons/$APP_NAME.png ]; then
-            cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
-          else
-            convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
-          fi
+          # Copy icon
+          cp icons/appproject-overwatch.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
 
           # Desktop entry
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
@@ -136,6 +142,9 @@ jobs:
 
           chmod 644 $APP_DIR/usr/share/applications/$APP_NAME.desktop
 
+      # ----------------------------
+      # Download linuxdeploy tools
+      # ----------------------------
       - name: Download linuxdeploy tools
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
@@ -150,17 +159,13 @@ jobs:
       - name: Install QtWebEngine runtime dependencies
         run: |
           apt-get update
-          apt-get install -y \
-            libnss3 \
-            libnspr4 \
-            libxss1 \
-            libasound2 \
-            libxcomposite1 \
-            libxdamage1 \
-            locales
+          apt-get install -y libnss3 libnspr4 libxss1 libasound2 libxcomposite1 libxdamage1 locales
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
+      # ----------------------------
+      # Build AppImage
+      # ----------------------------
       - name: Build AppImage
         id: appimage
         run: |
@@ -179,18 +184,18 @@ jobs:
           APPIMAGE=$(ls -1t *.AppImage | head -n 1)
           mv "$APPIMAGE" "appproject-overwatch.AppImage"
           echo "APPIMAGE=appproject-overwatch.AppImage" >> $GITHUB_ENV
-          echo "Built AppImage: appproject-overwatch.AppImage"
 
+      # ----------------------------
+      # Prepare QtIFW Installer
+      # ----------------------------
       - name: Prepare QtIFW structure
         run: |
           mkdir -p installer/input/config
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/meta
           mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/data
 
-          # Copy AppImage into installer data
+          # Copy AppImage and icon
           cp appproject-overwatch.AppImage installer/input/packages/com.yourcompany.projectoverwatch/data/
-
-          # Copy icon
           cp icons/appproject-overwatch.png installer/input/packages/com.yourcompany.projectoverwatch/data/
 
           # config.xml
@@ -230,10 +235,8 @@ jobs:
             var targetDir = installer.value("TargetDir");
             var appPath = targetDir + "/appproject-overwatch.AppImage";
 
-            // make executable
             component.addOperation("Execute", "/bin/chmod", "+x", appPath);
 
-            // Install desktop entry
             var desktopFile = installer.value("HomeDir") + "/.local/share/applications/appproject-overwatch.desktop";
             component.addOperation("WriteFile", desktopFile,
               "[Desktop Entry]\n" +
@@ -246,11 +249,9 @@ jobs:
               "overwrite=true"
             );
 
-            // Install icon
             var iconTarget = installer.value("HomeDir") + "/.local/share/icons/hicolor/256x256/apps/appproject-overwatch.png";
             component.addOperation("Copy", "@TargetDir@/appproject-overwatch.png", iconTarget);
 
-            // Update desktop DB
             component.addOperation("ExecuteDetached",
               "/usr/bin/update-desktop-database",
               installer.value("HomeDir") + "/.local/share/applications"
@@ -263,13 +264,15 @@ jobs:
           }
           EOF
 
+      # ----------------------------
+      # Install QtIFW
+      # ----------------------------
       - name: Install Qt Installer Framework
         run: |
           pip install aqtinstall==3.1.18 --root-user-action=ignore
           python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt || true
           IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1 || echo "4.6.1")
-          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW || \
-          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW
 
       - name: Detect binarycreator
         run: |
