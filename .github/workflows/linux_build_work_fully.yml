@@ -15,13 +15,14 @@ jobs:
       QT_VERSION: 6.5.3
       BUILD_DIR: build
       APP_NAME: appproject-overwatch
-      APP_DIR: AppDir
       PACKAGE_NAME: project-overwatch
       PACKAGE_VERSION: "1.0.0"
       ARCH: amd64
+      QT_INSTALL_DIR: ${{ github.workspace }}/Qt/${{ env.QT_VERSION }}/gcc_64
+      DEB_DIR: ${{ github.workspace }}/deb_build
+      OUT_DEB: ${{ github.workspace }}/${{ env.PACKAGE_NAME }}_${{ env.PACKAGE_VERSION }}_${{ env.ARCH }}.deb
 
     steps:
-      # Install Git
       - name: Install Git
         run: |
           apt-get update
@@ -30,14 +31,12 @@ jobs:
           apt-get update
           apt-get install -y git
 
-      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # Prepare environment (disable tzdata prompts)
       - name: Prepare environment
         run: |
           export DEBIAN_FRONTEND=noninteractive
@@ -46,8 +45,7 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
-      # Install base dependencies
-      - name: Install dependencies
+      - name: Install base dependencies
         run: |
           apt-get update
           apt-get install -y \
@@ -58,111 +56,156 @@ jobs:
             wget \
             curl \
             imagemagick \
-            libgl1-mesa-dev \
-            libglu1-mesa-dev \
-            libegl1-mesa-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            libglib2.0-0 libglib2.0-dev \
-            libdbus-1-dev \
-            libfontconfig1-dev \
-            libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libx11-xcb1 \
-            libxrender1 libxrandr2 libegl1 libglu1-mesa \
-            libxcb-render-util0 libxcb-render0 libxcb-image0 libxcb-keysyms1 \
-            libxcb-icccm4 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 \
-            libxcb-randr0 libxcb-xinerama0 libxcb-cursor0 libxcb1-dev \
-            libx11-xcb-dev \
-            libxkbfile-dev \
-            libxtst-dev \
-            libxt-dev \
-            libxinerama-dev
+            binutils \
+            file \
+            lsb-release \
+            ca-certificates \
+            xz-utils \
+            python3 \
+            python3-pip
 
-      # Install database libraries
-      - name: Install PostgreSQL/MySQL/ODBC libraries
-        run: |
-          apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
-            unixodbc unixodbc-dev odbcinst odbcinst1debian2
-
-      # Install Python & aqtinstall
-      - name: Install Python & aqt
-        run: |
-          apt-get install -y python3 python3-pip
-          pip3 install --upgrade pip
-          pip3 install aqtinstall==3.1.18
-
-      # Install Qt 6.5.3
-      - name: Install Qt ${{ env.QT_VERSION }}
-        run: |
-          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
-            --outputdir Qt \
-            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
-          echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
-
-      # Configure CMake
-      - name: Configure CMake
-        run: |
-          cmake -S . -B $BUILD_DIR -G Ninja \
-            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
-            -DCMAKE_BUILD_TYPE=Release
-
-      # Build project
-      - name: Build Project
-        run: cmake --build $BUILD_DIR --config Release --parallel
-
-      # Detect built executable
-      - name: Detect executable
-        id: findexe
-        run: |
-          EXE=$(find $BUILD_DIR -maxdepth 3 -type f -executable -name "$APP_NAME*" | head -n 1)
-          if [ -z "$EXE" ]; then
-            echo "No executable matching $APP_NAME found in $BUILD_DIR"
-            exit 1
-          fi
-          echo "EXE=$EXE" >> $GITHUB_ENV
-          echo "Found executable: $EXE"
-
-      # Prepare packaging tools
       - name: Install packaging utilities
         run: |
           apt-get update
           apt-get install -y fakeroot dpkg-dev dh-make debhelper
 
-      # Prepare deb package layout
-      - name: Create DEB package layout
+      - name: Install aqtinstall
+        run: |
+          pip3 install --upgrade pip
+          pip3 install aqtinstall==3.1.18
+
+      - name: Install Qt ${{ env.QT_VERSION }}
+        run: |
+          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
+            --outputdir Qt \
+            --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
+          echo "Qt installed to $QT_INSTALL_DIR"
+          ls -lah "$QT_INSTALL_DIR" || true
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B $BUILD_DIR -G Ninja \
+            -DCMAKE_PREFIX_PATH="${QT_INSTALL_DIR}" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Project
+        run: cmake --build $BUILD_DIR --config Release --parallel
+
+      - name: Detect executable
+        id: findexe
+        run: |
+          EXE=$(find $BUILD_DIR -maxdepth 4 -type f -executable -name "${APP_NAME}*" | head -n 1)
+          if [ -z "$EXE" ]; then
+            echo "No executable matching ${APP_NAME} found in ${BUILD_DIR}"
+            exit 1
+          fi
+          echo "Found executable: $EXE"
+          echo "EXE=$EXE" >> $GITHUB_ENV
+          ls -lah "$EXE"
+
+      - name: Prepare deb build layout
         run: |
           set -e
-          PKG_DIR=${GITHUB_WORKSPACE}/deb_build
+          PKG_DIR="${DEB_DIR}"
           rm -rf "$PKG_DIR"
           mkdir -p "$PKG_DIR/DEBIAN"
-          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}"
-          mkdir -p "$PKG_DIR/usr/bin"
+          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}/bin"
+          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}/lib"
+          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}/plugins"
+          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}/qml"
+          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}/libexec"
           mkdir -p "$PKG_DIR/usr/share/applications"
           mkdir -p "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
 
-          # Copy executable into /opt/<package>
-          cp "$EXE" "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
-          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
+          # Copy binary
+          cp "$EXE" "$PKG_DIR/opt/${PACKAGE_NAME}/bin/${PACKAGE_NAME}"
+          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/bin/${PACKAGE_NAME}"
 
-          # Create launcher symlink at postinst (do not create here)
-          # Create .desktop file (Exec points to /usr/bin/<binary>)
+      - name: Bundle Qt runtime (libs, plugins, qml, libexec)
+        run: |
+          set -e
+          PKG_DIR="${DEB_DIR}"
+          QT_DIR="${QT_INSTALL_DIR}"
+
+          echo "QT_DIR = $QT_DIR"
+          # Copy Qt libraries
+          rsync -a --delete "${QT_DIR}/lib/" "${PKG_DIR}/opt/${PACKAGE_NAME}/lib/" || true
+
+          # Copy plugins
+          rsync -a --delete "${QT_DIR}/plugins/" "${PKG_DIR}/opt/${PACKAGE_NAME}/plugins/" || true
+
+          # Copy qml modules
+          if [ -d "${QT_DIR}/qml" ]; then
+            rsync -a --delete "${QT_DIR}/qml/" "${PKG_DIR}/opt/${PACKAGE_NAME}/qml/" || true
+          fi
+
+          # Copy libexec (eg. QtWebEngineProcess)
+          if [ -d "${QT_DIR}/libexec" ]; then
+            rsync -a --delete "${QT_DIR}/libexec/" "${PKG_DIR}/opt/${PACKAGE_NAME}/libexec/" || true
+          fi
+
+          # Optional translations, icu, resources if present
+          for d in "${QT_DIR}/translations" "${QT_DIR}/resources"; do
+            if [ -d "$d" ]; then
+              rsync -a "$d" "${PKG_DIR}/opt/${PACKAGE_NAME}/" || true
+            fi
+          done
+
+          # Symlink top-level lib into bin's parent for $ORIGIN usage (we will use patchelf)
+          echo "Bundled Qt content sizes:"
+          du -sh "${PKG_DIR}/opt/${PACKAGE_NAME}" || true
+
+      - name: Patch rpath for executables and helper processes
+        run: |
+          set -e
+          PKG_DIR="${DEB_DIR}"
+          APP_BIN="${PKG_DIR}/opt/${PACKAGE_NAME}/bin/${PACKAGE_NAME}"
+          # Set rpath to use ./../lib relative to bin
+          if command -v patchelf >/dev/null 2>&1; then
+            patchelf --set-rpath '$ORIGIN/../lib' "$APP_BIN"
+          fi
+
+          # Also set rpath for QtWebEngineProcess (if exists)
+          WEBENGINE_PROC=$(find "${PKG_DIR}/opt/${PACKAGE_NAME}/libexec" -type f -name "QtWebEngineProcess" -print -quit || true)
+          if [ -n "$WEBENGINE_PROC" ]; then
+            if command -v patchelf >/dev/null 2>&1; then
+              patchelf --set-rpath '$ORIGIN/../lib' "$WEBENGINE_PROC" || true
+            fi
+          fi
+
+          # As an extra safety, set rpath for any ELF files inside libexec and bin
+          find "${PKG_DIR}/opt/${PACKAGE_NAME}" -type f -executable -print0 | xargs -0 file | grep ELF | cut -d: -f1 | while read -r f; do
+            if command -v patchelf >/dev/null 2>&1; then
+              patchelf --set-rpath '$ORIGIN/../lib' "$f" || true
+            fi
+          done || true
+
+      - name: Create desktop file & icon
+        run: |
+          set -e
+          PKG_DIR="${DEB_DIR}"
+          # Desktop entry
           cat > "$PKG_DIR/usr/share/applications/${PACKAGE_NAME}.desktop" <<EOF
           [Desktop Entry]
-          Type=Application
           Name=Project Overwatch
-          Exec=/usr/bin/${PACKAGE_NAME}
+          Exec=/opt/${PACKAGE_NAME}/bin/${PACKAGE_NAME}
           Icon=${PACKAGE_NAME}
-          Terminal=false
+          Type=Application
           Categories=Utility;
+          Terminal=false
           EOF
 
-          # Icon: if you have icons/ in repo, use it; otherwise create placeholder
+          # Icon: copy from repo if exists, otherwise create placeholder
           if [ -f icons/${PACKAGE_NAME}.png ]; then
             cp icons/${PACKAGE_NAME}.png "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${PACKAGE_NAME}.png"
           else
             convert -size 256x256 xc:none "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${PACKAGE_NAME}.png" || touch "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${PACKAGE_NAME}.png"
           fi
 
-          # Create DEBIAN/control
+      - name: Create DEBIAN control and maintainer scripts
+        run: |
+          set -e
+          PKG_DIR="${DEB_DIR}"
           cat > "$PKG_DIR/DEBIAN/control" <<EOF
           Package: ${PACKAGE_NAME}
           Version: ${PACKAGE_VERSION}
@@ -171,21 +214,19 @@ jobs:
           Architecture: ${ARCH}
           Maintainer: Your Name <you@example.com>
           Description: Project Overwatch - Qt-based monitoring application
-          Depends: libglib2.0-0
           EOF
 
-          # Create DEBIAN/postinst (create symlink and update icon cache)
+          # postinst: create symlink and update caches
           cat > "$PKG_DIR/DEBIAN/postinst" <<'POSTINST'
           #!/bin/sh
           set -e
-          # create symlink to /usr/bin
-          ln -sf /opt/project-overwatch/project-overwatch /usr/bin/project-overwatch
-          chmod +x /opt/project-overwatch/project-overwatch || true
-          # update icon cache if available
+          # Create symlink
+          ln -sf /opt/project-overwatch/bin/project-overwatch /usr/bin/project-overwatch
+          chmod +x /opt/project-overwatch/bin/project-overwatch || true
+          # Update icon cache and desktop db if available
           if command -v gtk-update-icon-cache >/dev/null 2>&1; then
             gtk-update-icon-cache -f /usr/share/icons/hicolor || true
           fi
-          # update desktop database if available
           if command -v update-desktop-database >/dev/null 2>&1; then
             update-desktop-database || true
           fi
@@ -193,7 +234,7 @@ jobs:
           POSTINST
           chmod 755 "$PKG_DIR/DEBIAN/postinst"
 
-          # Create DEBIAN/prerm (remove symlink)
+          # prerm: remove symlink
           cat > "$PKG_DIR/DEBIAN/prerm" <<'PRERM'
           #!/bin/sh
           set -e
@@ -204,57 +245,50 @@ jobs:
           PRERM
           chmod 755 "$PKG_DIR/DEBIAN/prerm"
 
-          # Ensure ownership and permissions are correct
-          find "$PKG_DIR" -type d -exec chmod 755 {} \;
-          find "$PKG_DIR" -type f -exec chmod 644 {} \;
-          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
-          
-          
-
-
-      - name: Fix .deb package permissions
+      - name: Fix permissions (directories and files)
         run: |
-          PKG_DIR=${GITHUB_WORKSPACE}/deb_build
-
-          echo "Fixing directory permissions..."
+          PKG_DIR="${DEB_DIR}"
+          echo "Fixing permissions..."
           find "$PKG_DIR" -type d -exec chmod 755 {} \;
+          # set regular files to 644 but exclude maintainer scripts
+          find "$PKG_DIR" -type f ! -path "$PKG_DIR/DEBIAN/postinst" ! -path "$PKG_DIR/DEBIAN/prerm" -exec chmod 644 {} \;
+          chmod 755 "$PKG_DIR/DEBIAN/postinst" "$PKG_DIR/DEBIAN/prerm"
+          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/bin/${PACKAGE_NAME}"
 
-          echo "Fixing file permissions except maintainer scripts..."
-          find "$PKG_DIR" -type f ! -name postinst ! -name prerm -exec chmod 644 {} \;
-
-          echo "Making maintainer scripts executable..."
-          chmod 755 "$PKG_DIR/DEBIAN/postinst"
-          chmod 755 "$PKG_DIR/DEBIAN/prerm"
-
-          echo "Making main binary executable..."
-          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
       - name: Build .deb
         run: |
           set -e
-          PKG_DIR=${GITHUB_WORKSPACE}/deb_build
-          OUTPUT_DEB=${GITHUB_WORKSPACE}/${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb
+          PKG_DIR="${DEB_DIR}"
+          OUTPUT_DEB="${OUT_DEB}"
+          echo "Building DEB at $OUTPUT_DEB ..."
           fakeroot dpkg-deb --build "$PKG_DIR" "$OUTPUT_DEB"
           ls -lah "$OUTPUT_DEB"
-          echo "DEB=$OUTPUT_DEB" >> $GITHUB_ENV
-          
-          
+          echo "DEB=${OUTPUT_DEB}" >> $GITHUB_ENV
 
-      # Run a quick lintian check (optional)
       - name: Lint .deb (optional)
         run: |
           apt-get update
           apt-get install -y lintian || true
-          if [ -f "${DEB:-$GITHUB_WORKSPACE}/${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb" ]; then
-            lintian --info --display-experimental "${GITHUB_WORKSPACE}/${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb" || true
-          else
-            lintian --info --display-experimental "${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb" || true
+          if [ -f "${OUT_DEB}" ]; then
+            lintian --info --display-experimental "${OUT_DEB}" || true
           fi
 
-      # Upload .deb artifact
+      - name: Debug: list deb contents (optional)
+        run: |
+          if [ -f "${OUT_DEB}" ]; then
+            echo "Deb file size:"
+            ls -lh "${OUT_DEB}"
+            echo "Listing archive members (first 50 lines):"
+            dpkg-deb -c "${OUT_DEB}" | sed -n '1,50p'
+          else
+            echo "No deb produced!"
+            ls -lah
+            exit 1
+          fi
+
       - name: Upload .deb package
         uses: actions/upload-artifact@v4
         with:
           name: project-overwatch-deb
           path: ${{ env.DEB }}
-
 
