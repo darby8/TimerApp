@@ -48,7 +48,7 @@ jobs:
             libglib2.0-dev libglib2.0-0 \
             libnss3 libnspr4 libasound2 \
             libxss1 libxcomposite1 libxdamage1 \
-            locales
+            locales  libxtst-dev
 
       - name: Install Python & aqtinstall
         run: |
