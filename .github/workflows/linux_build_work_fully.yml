@@ -208,6 +208,8 @@ jobs:
           find "$PKG_DIR" -type d -exec chmod 755 {} \;
           find "$PKG_DIR" -type f -exec chmod 644 {} \;
           chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
+          
+          
 
 
       - name: Fix .deb package permissions
@@ -217,20 +219,15 @@ jobs:
           echo "Fixing directory permissions..."
           find "$PKG_DIR" -type d -exec chmod 755 {} \;
 
-    	  echo "Fixing file permissions except maintainer scripts..."
-    	  find "$PKG_DIR" -type f ! -name postinst ! -name prerm -exec chmod 644 {} \;
+          echo "Fixing file permissions except maintainer scripts..."
+          find "$PKG_DIR" -type f ! -name postinst ! -name prerm -exec chmod 644 {} \;
 
-	  echo "Making maintainer scripts executable..."
-	  chmod 755 "$PKG_DIR/DEBIAN/postinst"
-	  chmod 755 "$PKG_DIR/DEBIAN/prerm"
+          echo "Making maintainer scripts executable..."
+          chmod 755 "$PKG_DIR/DEBIAN/postinst"
+          chmod 755 "$PKG_DIR/DEBIAN/prerm"
 
-	  echo "Making main binary executable..."
-	  chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
-
-
-
-
-
+          echo "Making main binary executable..."
+          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
       - name: Build .deb
         run: |
           set -e
