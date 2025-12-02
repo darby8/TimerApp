@@ -16,9 +16,12 @@ jobs:
       BUILD_DIR: build
       APP_NAME: appproject-overwatch
       APP_DIR: AppDir
-      APPIMAGE_EXTRACT_AND_RUN: 1
+      PACKAGE_NAME: project-overwatch
+      PACKAGE_VERSION: "1.0.0"
+      ARCH: amd64
 
     steps:
+      # Install Git
       - name: Install Git
         run: |
           apt-get update
@@ -27,12 +30,14 @@ jobs:
           apt-get update
           apt-get install -y git
 
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
+      # Prepare environment (disable tzdata prompts)
       - name: Prepare environment
         run: |
           export DEBIAN_FRONTEND=noninteractive
@@ -41,8 +46,10 @@ jobs:
           locale-gen en_US.UTF-8
           update-locale LANG=en_US.UTF-8
 
+      # Install base dependencies
       - name: Install dependencies
         run: |
+          apt-get update
           apt-get install -y \
             build-essential \
             cmake \
@@ -70,17 +77,20 @@ jobs:
             libxt-dev \
             libxinerama-dev
 
+      # Install database libraries
       - name: Install PostgreSQL/MySQL/ODBC libraries
         run: |
           apt-get install -y libpq-dev libpq5 libmysqlclient-dev \
             unixodbc unixodbc-dev odbcinst odbcinst1debian2
 
+      # Install Python & aqtinstall
       - name: Install Python & aqt
         run: |
           apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
+      # Install Qt 6.5.3
       - name: Install Qt ${{ env.QT_VERSION }}
         run: |
           python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
@@ -88,194 +98,142 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview qtserialport
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
+      # Configure CMake
       - name: Configure CMake
         run: |
           cmake -S . -B $BUILD_DIR -G Ninja \
             -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
             -DCMAKE_BUILD_TYPE=Release
 
+      # Build project
       - name: Build Project
         run: cmake --build $BUILD_DIR --config Release --parallel
 
+      # Detect built executable
       - name: Detect executable
         id: findexe
         run: |
-          EXE=$(find $BUILD_DIR -maxdepth 2 -type f -executable -name "$APP_NAME*" | head -n 1)
+          EXE=$(find $BUILD_DIR -maxdepth 3 -type f -executable -name "$APP_NAME*" | head -n 1)
+          if [ -z "$EXE" ]; then
+            echo "No executable matching $APP_NAME found in $BUILD_DIR"
+            exit 1
+          fi
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Found executable: $EXE"
 
-      - name: Create AppDir
+      # Prepare packaging tools
+      - name: Install packaging utilities
         run: |
-          mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications $APP_DIR/usr/share/icons/hicolor/256x256/apps
-          cp "$EXE" $APP_DIR/usr/bin/$APP_NAME
-          chmod +x $APP_DIR/usr/bin/$APP_NAME
+          apt-get update
+          apt-get install -y fakeroot dpkg-dev dh-make debhelper
 
-          if [ -f icons/$APP_NAME.png ]; then
-            cp icons/$APP_NAME.png $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
-          else
-            convert -size 256x256 xc:none $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png || touch $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
-          fi
+      # Prepare deb package layout
+      - name: Create DEB package layout
+        run: |
+          set -e
+          PKG_DIR=${GITHUB_WORKSPACE}/deb_build
+          rm -rf "$PKG_DIR"
+          mkdir -p "$PKG_DIR/DEBIAN"
+          mkdir -p "$PKG_DIR/opt/${PACKAGE_NAME}"
+          mkdir -p "$PKG_DIR/usr/bin"
+          mkdir -p "$PKG_DIR/usr/share/applications"
+          mkdir -p "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
 
-          cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
+          # Copy executable into /opt/<package>
+          cp "$EXE" "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
+          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
+
+          # Create launcher symlink at postinst (do not create here)
+          # Create .desktop file (Exec points to /usr/bin/<binary>)
+          cat > "$PKG_DIR/usr/share/applications/${PACKAGE_NAME}.desktop" <<EOF
           [Desktop Entry]
-          Name=Project Overwatch
-          Exec=$APP_NAME
-          Icon=$APP_NAME
           Type=Application
+          Name=Project Overwatch
+          Exec=/usr/bin/${PACKAGE_NAME}
+          Icon=${PACKAGE_NAME}
+          Terminal=false
           Categories=Utility;
           EOF
 
-      - name: Download linuxdeploy & plugin
-        run: |
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy*.AppImage
+          # Icon: if you have icons/ in repo, use it; otherwise create placeholder
+          if [ -f icons/${PACKAGE_NAME}.png ]; then
+            cp icons/${PACKAGE_NAME}.png "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${PACKAGE_NAME}.png"
+          else
+            convert -size 256x256 xc:none "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${PACKAGE_NAME}.png" || touch "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${PACKAGE_NAME}.png"
+          fi
 
-      - name: Download linuxdeployqt
-        run: |
-          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
-          chmod +x linuxdeployqt
+          # Create DEBIAN/control
+          cat > "$PKG_DIR/DEBIAN/control" <<EOF
+          Package: ${PACKAGE_NAME}
+          Version: ${PACKAGE_VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: ${ARCH}
+          Maintainer: Your Name <you@example.com>
+          Description: Project Overwatch - Qt-based monitoring application
+          Depends: libglib2.0-0
+          EOF
 
-      - name: Install QtWebEngine runtime dependencies
+          # Create DEBIAN/postinst (create symlink and update icon cache)
+          cat > "$PKG_DIR/DEBIAN/postinst" <<'POSTINST'
+          #!/bin/sh
+          set -e
+          # create symlink to /usr/bin
+          ln -sf /opt/project-overwatch/project-overwatch /usr/bin/project-overwatch
+          chmod +x /opt/project-overwatch/project-overwatch || true
+          # update icon cache if available
+          if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+          fi
+          # update desktop database if available
+          if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database || true
+          fi
+          exit 0
+          POSTINST
+          chmod 755 "$PKG_DIR/DEBIAN/postinst"
+
+          # Create DEBIAN/prerm (remove symlink)
+          cat > "$PKG_DIR/DEBIAN/prerm" <<'PRERM'
+          #!/bin/sh
+          set -e
+          if [ -L /usr/bin/project-overwatch ]; then
+            rm -f /usr/bin/project-overwatch
+          fi
+          exit 0
+          PRERM
+          chmod 755 "$PKG_DIR/DEBIAN/prerm"
+
+          # Ensure ownership and permissions are correct
+          find "$PKG_DIR" -type d -exec chmod 755 {} \;
+          find "$PKG_DIR" -type f -exec chmod 644 {} \;
+          chmod 755 "$PKG_DIR/opt/${PACKAGE_NAME}/${PACKAGE_NAME}"
+
+      # Build .deb package
+      - name: Build .deb
+        run: |
+          set -e
+          PKG_DIR=${GITHUB_WORKSPACE}/deb_build
+          OUTPUT_DEB=${GITHUB_WORKSPACE}/${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb
+          fakeroot dpkg-deb --build "$PKG_DIR" "$OUTPUT_DEB"
+          ls -lah "$OUTPUT_DEB"
+          echo "DEB=$OUTPUT_DEB" >> $GITHUB_ENV
+
+      # Run a quick lintian check (optional)
+      - name: Lint .deb (optional)
         run: |
           apt-get update
-          apt-get install -y \
-            libnss3 \
-            libnspr4 \
-            libxss1 \
-            libasound2 \
-            libxcomposite1 \
-            libxdamage1 \
-            locales
-          locale-gen en_US.UTF-8
-          update-locale LANG=en_US.UTF-8
+          apt-get install -y lintian || true
+          if [ -f "${DEB:-$GITHUB_WORKSPACE}/${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb" ]; then
+            lintian --info --display-experimental "${GITHUB_WORKSPACE}/${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb" || true
+          else
+            lintian --info --display-experimental "${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb" || true
+          fi
 
-      - name: Build AppImage
-        id: appimage
-        run: |
-          export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
-          export QML_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
-          export QML2_IMPORT_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/qml"
-          export QT_PLUGIN_PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/plugins"
-
-          ./linuxdeployqt \
-            $APP_DIR/usr/share/applications/$APP_NAME.desktop \
-            -qmldir="$GITHUB_WORKSPACE/QML" \
-            -qmake=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin/qmake \
-            -bundle-non-qt-libs \
-            -appimage
-
-          APPIMAGE=$(ls -1t *.AppImage | head -n 1)
-          echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
-          echo "✅ Built AppImage: $APPIMAGE"
-
-      - name: Upload AppImage
+      # Upload .deb artifact
+      - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-Linux-AppImage
-          path: "*.AppImage"
-
-      - name: Prepare Qt Installer Framework structure
-        run: |
-          mkdir -p installer/input/config
-          mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/meta
-          mkdir -p installer/input/packages/com.yourcompany.projectoverwatch/data
-
-          # Copy AppImage for installer
-          APPFILE=$(ls -1t *.AppImage | head -n 1)
-          cp "$APPFILE" installer/input/packages/com.yourcompany.projectoverwatch/data/project-overwatch.AppImage
-
-          # config.xml
-          cat <<EOF > installer/input/config/config.xml
-          <?xml version="1.0" encoding="UTF-8"?>
-          <Installer>
-              <Name>Project Overwatch Installer</Name>
-              <Version>1.0.0</Version>
-              <Title>Project Overwatch</Title>
-              <Publisher>Your Company</Publisher>
-              <StartMenuDir>Project Overwatch</StartMenuDir>
-              <TargetDir>@TargetDir@</TargetDir>
-              <RunProgram>@TargetDir@/project-overwatch.AppImage</RunProgram>
-          </Installer>
-          EOF
-
-          # package.xml
-          cat <<EOF > installer/input/packages/com.yourcompany.projectoverwatch/meta/package.xml
-          <?xml version="1.0" encoding="UTF-8"?>
-          <Package>
-              <DisplayName>Project Overwatch</DisplayName>
-              <Description>Qt-based monitoring application</Description>
-              <Version>1.0.0</Version>
-              <ReleaseDate>2025-11-13</ReleaseDate>
-              <Default>true</Default>
-              <Script>installscript.qs</Script>
-          </Package>
-          EOF
-
-          # installscript.qs
-          cat <<'EOF' > installer/input/packages/com.yourcompany.projectoverwatch/meta/installscript.qs
-          function Component() {}
-
-          Component.prototype.createOperations = function() {
-              component.createOperations();
-
-              try {
-                  var isRoot = (installer.environmentVariable("USER") === "root");
-                  var targetDir = isRoot ? "/opt/ProjectOverwatch" : installer.value("HomeDir") + "/ProjectOverwatch";
-                  var appPath = targetDir + "/project-overwatch.AppImage";
-
-                  component.addOperation("Mkdir", targetDir);
-                  component.addOperation("Copy", "@SourceDir@/data/project-overwatch.AppImage", appPath);
-                  component.addOperation("Execute", "/bin/chmod", "+x", appPath);
-
-                  var desktopDir = isRoot ? "/usr/share/applications" : installer.value("HomeDir") + "/.local/share/applications";
-                  component.addOperation("Mkdir", desktopDir);
-                  var desktopFile = desktopDir + "/project-overwatch.desktop";
-                  component.addOperation("CreateDesktopEntry", desktopFile, appPath, "Project Overwatch");
-
-                  var iconDir = isRoot ? "/usr/share/icons/hicolor/256x256/apps" : installer.value("HomeDir") + "/.local/share/icons/hicolor/256x256/apps";
-                  component.addOperation("Mkdir", iconDir);
-                  component.addOperation("Copy", "@SourceDir@/data/project-overwatch.AppImage", iconDir + "/project-overwatch.png");
-
-              } catch (e) {
-                  console.log("❌ Installer error: " + e);
-              }
-          }
-
-          Component.prototype.installationFinished = function() {
-              try {
-                  var isRoot = (installer.environmentVariable("USER") === "root");
-                  if (!isRoot) {
-                      var targetDir = installer.value("HomeDir") + "/ProjectOverwatch";
-                      var appPath = targetDir + "/project-overwatch.AppImage";
-                      QProcess.startDetached(appPath, []);
-                  }
-              } catch (e) {
-                  console.log("⚠️ Failed to auto-run app: " + e);
-              }
-          }
-          EOF
-
-      - name: Install Qt Installer Framework (QtIFW)
-        run: |
-          pip install aqtinstall==3.1.18 --root-user-action=ignore
-          python3 -m aqt install-tool linux desktop tools_ifw 4.4 --outputdir QtIFW
-
-      - name: Detect binarycreator
-        run: |
-          IFW_PATH=$(find "$GITHUB_WORKSPACE/QtIFW" -type f -name binarycreator -exec dirname {} \; | head -n 1)
-          echo "IFW_PATH=$IFW_PATH" >> $GITHUB_ENV
-
-      - name: Build GUI Installer
-        run: |
-          $IFW_PATH/binarycreator \
-            -c installer/input/config/config.xml \
-            -p installer/input/packages \
-            project-overwatch-installer.run
-
-      - name: Upload GUI Installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-overwatch-GUI-Installer
-          path: project-overwatch-installer.run
+          name: project-overwatch-deb
+          path: "${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCH}.deb"
 
