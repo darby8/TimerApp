@@ -116,7 +116,7 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<EOF > $PKG_DIR${INSTALL_DIR}/bin/run-${APP_NAME}.sh
-#!/bin/bash
+
           export LD_LIBRARY_PATH=${INSTALL_DIR}/lib:\$LD_LIBRARY_PATH
           export QT_PLUGIN_PATH=${INSTALL_DIR}/plugins
           export QT_QPA_PLATFORM_PLUGIN_PATH=${INSTALL_DIR}/plugins/platforms
@@ -173,7 +173,7 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/postinst
-#!/bin/bash
+
           chmod +x /opt/project-overwatch/bin/*
           update-desktop-database || true
           EOF
@@ -183,7 +183,7 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/prerm
-#!/bin/bash
+
           rm -f /usr/share/applications/appproject-overwatch.desktop
           update-desktop-database || true
           EOF
@@ -193,7 +193,7 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/postrm
-#!/bin/bash
+
           rm -rf /opt/project-overwatch
           EOF
           chmod 755 $PKG_DIR/DEBIAN/postrm
