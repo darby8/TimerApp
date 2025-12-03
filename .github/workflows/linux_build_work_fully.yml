@@ -116,13 +116,13 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<EOF > $PKG_DIR${INSTALL_DIR}/bin/run-${APP_NAME}.sh
-
-	  export LD_LIBRARY_PATH=${INSTALL_DIR}/lib:\$LD_LIBRARY_PATH
-	  export QT_PLUGIN_PATH=${INSTALL_DIR}/plugins
-	  export QT_QPA_PLATFORM_PLUGIN_PATH=${INSTALL_DIR}/plugins/platforms
-	  export QML2_IMPORT_PATH=${INSTALL_DIR}/qml
-	  exec ${INSTALL_DIR}/bin/${APP_NAME} "\$@"
-	  EOF
+#!/bin/bash
+          export LD_LIBRARY_PATH=${INSTALL_DIR}/lib:\$LD_LIBRARY_PATH
+          export QT_PLUGIN_PATH=${INSTALL_DIR}/plugins
+          export QT_QPA_PLATFORM_PLUGIN_PATH=${INSTALL_DIR}/plugins/platforms
+          export QML2_IMPORT_PATH=${INSTALL_DIR}/qml
+          exec ${INSTALL_DIR}/bin/${APP_NAME} "\$@"
+          EOF
           chmod +x $PKG_DIR${INSTALL_DIR}/bin/run-${APP_NAME}.sh
 
       - name: Install icon & desktop entry
@@ -138,13 +138,13 @@ jobs:
           fi
 
           cat <<EOF > $PKG_DIR/usr/share/applications/${APP_NAME}.desktop
-	  [Desktop Entry]
-	  Name=Project Overwatch
-	  Exec=/opt/project-overwatch/bin/run-${APP_NAME}.sh
-	  Icon=${APP_NAME}
-	  Type=Application
-	  Categories=Utility;
-	  EOF
+          [Desktop Entry]
+          Name=Project Overwatch
+          Exec=/opt/project-overwatch/bin/run-${APP_NAME}.sh
+          Icon=${APP_NAME}
+          Type=Application
+          Categories=Utility;
+          EOF
 
       - name: Copy Qt libraries
         run: |
@@ -159,24 +159,24 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<EOF > $PKG_DIR/DEBIAN/control
-	  Package: ${PACKAGE_NAME}
-	  Version: ${PACKAGE_VERSION}
-	  Section: utils
-	  Priority: optional
-	  Architecture: ${ARCH}
-	  Maintainer: You
-	  Description: Project Overwatch GUI Application
-	  Depends: libglib2.0-0, libnss3, libasound2, libxss1, libxdamage1, libxcomposite1
-	  EOF
+          Package: ${PACKAGE_NAME}
+          Version: ${PACKAGE_VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: ${ARCH}
+          Maintainer: You
+          Description: Project Overwatch GUI Application
+          Depends: libglib2.0-0, libnss3, libasound2, libxss1, libxdamage1, libxcomposite1
+          EOF
 
       - name: Create postinst
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/postinst
 #!/bin/bash
-	  chmod +x /opt/project-overwatch/bin/*
-	  update-desktop-database || true
-	  EOF
+          chmod +x /opt/project-overwatch/bin/*
+          update-desktop-database || true
+          EOF
           chmod 755 $PKG_DIR/DEBIAN/postinst
 
       - name: Create prerm
@@ -184,9 +184,9 @@ jobs:
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/prerm
 #!/bin/bash
-	  rm -f /usr/share/applications/appproject-overwatch.desktop
-	  update-desktop-database || true
-	  EOF
+          rm -f /usr/share/applications/appproject-overwatch.desktop
+          update-desktop-database || true
+          EOF
           chmod 755 $PKG_DIR/DEBIAN/prerm
 
       - name: Create postrm
@@ -194,8 +194,8 @@ jobs:
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/postrm
 #!/bin/bash
-	  rm -rf /opt/project-overwatch
-	  EOF
+          rm -rf /opt/project-overwatch
+          EOF
           chmod 755 $PKG_DIR/DEBIAN/postrm
 
       - name: Build .deb
