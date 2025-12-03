@@ -94,9 +94,10 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Executable: $EXE"
 
-      # ---------------------------
-      #  CREATE DEB PACKAGE
-      # ---------------------------
+      # --------------------------------------------------
+      #             CREATE   D E B   PACKAGE
+      # --------------------------------------------------
+
       - name: Create DEB package structure
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
@@ -108,14 +109,28 @@ jobs:
           mkdir -p $PKG_DIR/usr/share/applications
           mkdir -p $PKG_DIR/usr/share/icons/hicolor/256x256/apps
 
-          cp "$EXE" $PKG_DIR${INSTALL_DIR}/bin/$APP_NAME
-          chmod +x $PKG_DIR${INSTALL_DIR}/bin/$APP_NAME
+          cp "$EXE" $PKG_DIR${INSTALL_DIR}/bin/${APP_NAME}
+          chmod +x $PKG_DIR${INSTALL_DIR}/bin/${APP_NAME}
 
-      - name: Copy icon & desktop entry
+      - name: Create launcher wrapper
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
+          cat <<EOF > $PKG_DIR${INSTALL_DIR}/bin/run-${APP_NAME}.sh
 
+	  export LD_LIBRARY_PATH=${INSTALL_DIR}/lib:\$LD_LIBRARY_PATH
+	  export QT_PLUGIN_PATH=${INSTALL_DIR}/plugins
+	  export QT_QPA_PLATFORM_PLUGIN_PATH=${INSTALL_DIR}/plugins/platforms
+	  export QML2_IMPORT_PATH=${INSTALL_DIR}/qml
+	  exec ${INSTALL_DIR}/bin/${APP_NAME} "\$@"
+	  EOF
+          chmod +x $PKG_DIR${INSTALL_DIR}/bin/run-${APP_NAME}.sh
+
+      - name: Install icon & desktop entry
+        run: |
+          PKG_DIR=$GITHUB_WORKSPACE/deb_build
           ICON_PATH=$PKG_DIR/usr/share/icons/hicolor/256x256/apps/${APP_NAME}.png
+
+          # Copy real icon or create placeholder
           if [ -f icons/$APP_NAME.png ]; then
             cp icons/$APP_NAME.png "$ICON_PATH"
           else
@@ -123,13 +138,13 @@ jobs:
           fi
 
           cat <<EOF > $PKG_DIR/usr/share/applications/${APP_NAME}.desktop
-          [Desktop Entry]
-          Name=Project Overwatch
-          Exec=${INSTALL_DIR}/bin/${APP_NAME}
-          Icon=${APP_NAME}
-          Type=Application
-          Categories=Utility;
-          EOF
+	  [Desktop Entry]
+	  Name=Project Overwatch
+	  Exec=/opt/project-overwatch/bin/run-${APP_NAME}.sh
+	  Icon=${APP_NAME}
+	  Type=Application
+	  Categories=Utility;
+	  EOF
 
       - name: Copy Qt libraries
         run: |
@@ -144,26 +159,44 @@ jobs:
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<EOF > $PKG_DIR/DEBIAN/control
-          Package: ${PACKAGE_NAME}
-          Version: ${PACKAGE_VERSION}
-          Section: utils
-          Priority: optional
-          Architecture: ${ARCH}
-          Maintainer: You
-          Description: Project Overwatch GUI Application
-          Depends: libglib2.0-0, libnss3, libasound2, libxss1, libxdamage1, libxcomposite1
-          EOF
+	  Package: ${PACKAGE_NAME}
+	  Version: ${PACKAGE_VERSION}
+	  Section: utils
+	  Priority: optional
+	  Architecture: ${ARCH}
+	  Maintainer: You
+	  Description: Project Overwatch GUI Application
+	  Depends: libglib2.0-0, libnss3, libasound2, libxss1, libxdamage1, libxcomposite1
+	  EOF
 
       - name: Create postinst
         run: |
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
-
           cat <<'EOF' > $PKG_DIR/DEBIAN/postinst
-
-          chmod +x /opt/project-overwatch/bin/*
-          update-desktop-database
-          EOF
+#!/bin/bash
+	  chmod +x /opt/project-overwatch/bin/*
+	  update-desktop-database || true
+	  EOF
           chmod 755 $PKG_DIR/DEBIAN/postinst
+
+      - name: Create prerm
+        run: |
+          PKG_DIR=$GITHUB_WORKSPACE/deb_build
+          cat <<'EOF' > $PKG_DIR/DEBIAN/prerm
+#!/bin/bash
+	  rm -f /usr/share/applications/appproject-overwatch.desktop
+	  update-desktop-database || true
+	  EOF
+          chmod 755 $PKG_DIR/DEBIAN/prerm
+
+      - name: Create postrm
+        run: |
+          PKG_DIR=$GITHUB_WORKSPACE/deb_build
+          cat <<'EOF' > $PKG_DIR/DEBIAN/postrm
+#!/bin/bash
+	  rm -rf /opt/project-overwatch
+	  EOF
+          chmod 755 $PKG_DIR/DEBIAN/postrm
 
       - name: Build .deb
         run: |

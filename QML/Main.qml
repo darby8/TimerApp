@@ -28,14 +28,12 @@ ApplicationWindow {
     property var analyticsCache: null
     property var activityCache: null
     property int savedFilterIndex: 0
-
     property string selectedTab: "Time"
     property string userName:""
     property string userEmail:""
     property int totalSeconds: TimerManager.seconds
     property int hours: Math.floor(totalSeconds / 3600)
     property int minutes: Math.floor((totalSeconds % 3600) / 60)
-
     property var userLogs: []
     property var logs: []
     property var allLogs: []
@@ -53,7 +51,7 @@ ApplicationWindow {
         onTriggered: {
             console.log("[AI Sync] Running every", aiSyncPeriod, "minutes");
             Script.getUserAnalytics(tracker.getAccessToken, function(data) {
-                console.log(JSON.stringify(data),"=========analytics========")
+                // console.log(JSON.stringify(data),"=========analytics========")
                 mainWindow.analyticsCache = data;
                 if (pageLoader.item && mainWindow.selectedTab === "Analytics") {
                     pageLoader.item.logs = data;
@@ -63,7 +61,7 @@ ApplicationWindow {
                 data = data;
                 mainWindow.timeLogCache = data;
                 mainWindow.activityCache = data;
-                console.log(JSON.stringify(data),"=======Timelog==========")
+                // console.log(JSON.stringify(data),"=======Timelog==========")
                 if (pageLoader.item) {
                     if (pageLoader.item.hasOwnProperty("allLogs"))
                         pageLoader.item.allLogs = data.slice();
