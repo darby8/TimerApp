@@ -163,11 +163,12 @@ jobs:
       # -----------------------------
       # BUILD MSI
       # -----------------------------
-      - name: Build MSI Installer
+      - name: Build MSI
         shell: pwsh
         run: |
           candle msi\Overwatch.wxs -o msi\Overwatch.wixobj
-          light msi\Overwatch.wixobj -o Overwatch.msi
+          light msi\Overwatch.wixobj -o msi\Overwatch.msi
+
 
 
       # -----------------------------

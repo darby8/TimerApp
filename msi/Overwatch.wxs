@@ -10,7 +10,7 @@
     UpgradeCode="7F6B4E8D-1A3C-4F28-9E53-9C5B8A2E41D7">
 
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
-
+    <MediaTemplate EmbedCab="yes"/>
     <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
     <MediaTemplate/>
 
