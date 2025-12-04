@@ -128,17 +128,25 @@ jobs:
       - name: Harvest layout (heat) -> AppFiles.wxs
         shell: pwsh
         run: |
-          $heat = "C:\Program Files (x86)\WiX Toolset v3.11\bin\heat.exe"
-          if (-not (Test-Path $heat)) {
-            Write-Error "heat.exe not found"
+          Write-Host "Searching for heat.exe..."
+
+          $heat = Get-ChildItem -Path "C:\" -Recurse -Filter heat.exe -ErrorAction SilentlyContinue |
+                  Sort-Object FullName |
+                  Select-Object -First 1
+
+          if (-not $heat) {
+            Write-Error "❌ heat.exe not found anywhere on system!"
             exit 1
           }
 
-          & $heat dir "msi\layout" `
+          Write-Host "✅ heat.exe found at: $($heat.FullName)"
+
+          & $heat.FullName dir "msi\layout" `
             -ag -srd -cg AppFiles `
             -dr INSTALLDIR `
             -var var.LayoutDir `
             -out "msi\AppFiles.wxs"
+
 
 
       # -----------------------------
