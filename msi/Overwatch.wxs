@@ -1,4 +1,6 @@
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
   <Product
     Id="*"
@@ -9,13 +11,21 @@
     UpgradeCode="7F6B4E8D-1A3C-4F28-9E53-9C5B8A2E41D7">
 
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
-    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
     <MediaTemplate EmbedCab="yes"/>
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
 
-    <!-- ========================= -->
-    <!-- DIRECTORY STRUCTURE -->
-    <!-- ========================= -->
+    <!-- ----------------------------------------------------
+         Properties:
+         - START_ON_BOOT (default 1 = checked)
+         - REMOVE_APPDATA (default 0 = do not remove)
+         These can be set from the UI or from command line.
+       ---------------------------------------------------- -->
+    <Property Id="START_ON_BOOT" Value="1"/>
+    <Property Id="REMOVE_APPDATA" Value="0"/>
 
+    <!-- ----------------------
+         Directory tree (per-machine)
+         ---------------------- -->
     <Directory Id="TARGETDIR" Name="SourceDir">
 
       <Directory Id="ProgramFilesFolder">
@@ -24,108 +34,112 @@
         </Directory>
       </Directory>
 
-      <Directory Id="DesktopFolder"/>
-
-      <Directory Id="ProgramMenuFolder">
+      <!-- common (all users) desktop & start menu -->
+      <Directory Id="CommonDesktopFolder"/>
+      <Directory Id="CommonProgramsFolder">
         <Directory Id="StartMenuDir" Name="Overwatch"/>
       </Directory>
 
     </Directory>
 
-    <!-- ========================= -->
-    <!-- MAIN APP FILE -->
-    <!-- ========================= -->
-
+    <!-- =============================
+         Main executable file (KeyPath)
+         - We add shortcuts under the File element so the file remains the KeyPath.
+         - Heat (in the workflow) will create an AppFiles ComponentGroup that contains
+           the rest of the files harvested from msi\layout.
+       ============================= -->
     <DirectoryRef Id="INSTALLDIR">
       <Component Id="MainExecutable" Guid="*">
-        <File Source="msi\layout\appproject-overwatch.exe" KeyPath="yes"/>
+        <File Source="msi\layout\appproject-overwatch.exe" KeyPath="yes">
+          <!-- Desktop shortcut (all-users) -->
+          <Shortcut
+            Id="OverwatchDesktopShortcut"
+            Directory="CommonDesktopFolder"
+            Name="Overwatch"
+            WorkingDirectory="INSTALLDIR"
+            Advertise="no"/>
+
+          <!-- Start menu shortcut (all-users) -->
+          <Shortcut
+            Id="OverwatchStartMenuShortcut"
+            Directory="StartMenuDir"
+            Name="Overwatch"
+            WorkingDirectory="INSTALLDIR"
+            Advertise="no"/>
+        </File>
+
+        <!-- remove install folder on uninstall if empty -->
+        <RemoveFolder Id="RemoveInstallDir" On="uninstall"/>
       </Component>
     </DirectoryRef>
 
-    <!-- ========================= -->
-    <!-- DESKTOP SHORTCUT -->
-    <!-- ========================= -->
-
-    <DirectoryRef Id="DesktopFolder">
-      <Component Id="DesktopShortcut" Guid="*">
-        <Shortcut
-          Id="DesktopShortcut"
-          Name="Overwatch"
-          Target="[INSTALLDIR]appproject-overwatch.exe"
-          WorkingDirectory="INSTALLDIR"/>
-
-        <RegistryValue Root="HKCU"
-                       Key="Software\Reak\Overwatch"
-                       Name="Desktop"
-                       Type="integer"
-                       Value="1"
-                       KeyPath="yes"/>
-      </Component>
-    </DirectoryRef>
-
-    <!-- ========================= -->
-    <!-- START MENU SHORTCUT -->
-    <!-- ========================= -->
-
+    <!-- Component that ensures the StartMenu folder is removed (per-machine keypath) -->
     <DirectoryRef Id="StartMenuDir">
-      <Component Id="StartMenuShortcut" Guid="*">
-        <Shortcut
-          Id="StartMenuShortcut"
-          Name="Overwatch"
-          Target="[INSTALLDIR]appproject-overwatch.exe"
-          WorkingDirectory="INSTALLDIR"/>
-
+      <Component Id="StartMenuFolderRemover" Guid="*">
         <RemoveFolder Id="RemoveStartMenuDir" On="uninstall"/>
-
-        <RegistryValue Root="HKCU"
-                       Key="Software\Reak\Overwatch"
-                       Name="StartMenu"
-                       Type="integer"
-                       Value="1"
-                       KeyPath="yes"/>
+        <RegistryValue Root="HKLM" Key="Software\Reak\Overwatch" Name="StartMenu" Type="integer" Value="1" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
-    <!-- ========================= -->
-    <!-- STARTUP REGISTRY (ALL USERS) -->
-    <!-- ========================= -->
+    <!-- Startup behavior (all-users) -->
+    <!-- This component will be installed only when the property START_ON_BOOT=1 -->
+    <DirectoryRef Id="INSTALLDIR">
+      <Component Id="StartupRegistry" Guid="*">
+        <Condition><![CDATA[START_ON_BOOT = "1"]]></Condition>
+        <RegistryValue
+          Root="HKLM"
+          Key="Software\Microsoft\Windows\CurrentVersion\Run"
+          Name="Overwatch"
+          Value="[INSTALLDIR]appproject-overwatch.exe"
+          Type="string"
+          KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
 
-    <Component Id="StartupRegistry" Directory="TARGETDIR" Guid="*">
-      <RegistryValue
-        Root="HKLM"
-        Key="Software\Microsoft\Windows\CurrentVersion\Run"
-        Name="Overwatch"
-        Value="[INSTALLDIR]appproject-overwatch.exe"
-        Type="string"
-        KeyPath="yes"/>
-    </Component>
+    <!-- =============================
+         Harvested AppFiles (created by heat in the workflow).
+         The workflow will generate msi\AppFiles.wxs with a ComponentGroup Id="AppFiles".
+         We reference it here so all files from msi\layout are included in the MSI.
+       ============================= -->
+    <ComponentGroupRef Id="AppFiles" />
 
-    <!-- ========================= -->
-    <!-- REMOVE APPDATA EXACT LIKE NSIS -->
-    <!-- ========================= -->
+    <!-- =============================
+         Uninstall-time removal of %APPDATA%\Reak\Overwatch
+         - Only executed when REMOVE_APPDATA = 1
+         - Runs deferred, elevated (Impersonate="no")
+         - If user chooses NOT to remove, no action taken.
+         NOTE: When uninstalling from Programs & Features the UI does not expose
+         this property by default; see instructions below for how to pass it.
+       ============================= -->
+    <Property Id="WIXUI_RUN_NORMALCA" Value="1" />
+    <Property Id="CMD_EXE" Value="cmd.exe" />
 
-    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR"/>
+    <CustomAction
+      Id="DeleteUserData"
+      Property="CMD_EXE"
+      ExeCommand='/c if "%REMOVE_APPDATA%" == "1" if exist "%APPDATA%\Reak\Overwatch" rmdir /s /q "%APPDATA%\Reak\Overwatch"'
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore"/>
 
-    <CustomAction Id="DeleteUserData"
-                  Execute="deferred"
-                  Impersonate="no"
-                  ExeCommand='cmd.exe /c if exist "%APPDATA%\Reak\Overwatch" rmdir /s /q "%APPDATA%\Reak\Overwatch"'/>
-
+    <!-- Ensure the RemoveUserData action is executed during uninstall only -->
     <InstallExecuteSequence>
       <Custom Action="DeleteUserData" After="RemoveFiles">REMOVE="ALL"</Custom>
     </InstallExecuteSequence>
 
-    <!-- ========================= -->
-    <!-- FEATURES -->
-    <!-- ========================= -->
-
+    <!-- =============================
+         Feature definitions:
+       ============================= -->
     <Feature Id="MainFeature" Title="Overwatch" Level="1">
       <ComponentRef Id="MainExecutable"/>
-      <ComponentRef Id="DesktopShortcut"/>
-      <ComponentRef Id="StartMenuShortcut"/>
+      <ComponentRef Id="StartMenuFolderRemover"/>
       <ComponentRef Id="StartupRegistry"/>
+      <!-- AppFiles is added (harvested DLLs + assets) -->
+      <ComponentGroupRef Id="AppFiles"/>
     </Feature>
 
-  </Product>
+    <!-- Use the default Wix UI (you can swap to WixUI_Mondo or customize later) -->
+    <UIRef Id="WixUI_Minimal"/>
 
+  </Product>
 </Wix>
