@@ -7,7 +7,7 @@
     Manufacturer="Reak"
     Version="1.0.0"
     Language="1033"
-    UpgradeCode="PUT-GUID-HERE">
+    UpgradeCode="7F6B4E8D-1A3C-4F28-9E53-9C5B8A2E41D7">
 
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
 
