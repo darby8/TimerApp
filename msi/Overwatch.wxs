@@ -95,13 +95,19 @@
     <!-- ============================= -->
 
     <Property Id="APPDATA_DIR" Value="[%APPDATA%]\Reak\Overwatch"/>
+    
+    <!-- Property that explicitly points to cmd.exe -->
+    <Property Id="CMD_EXE" Value="cmd.exe"/>
 
+<!-- Uninstall cleanup (EXACT NSIS BEHAVIOR) -->
     <CustomAction
-      Id="DeleteUserData"
-      ExeCommand='cmd /c if exist "[APPDATA_DIR]" rmdir /s /q "[APPDATA_DIR]"'
-      Execute="deferred"
-      Impersonate="no"
-      Return="ignore"/>
+       Id="DeleteUserData"
+       Property="CMD_EXE"
+       ExeCommand='/c if exist "%APPDATA%\Reak\Overwatch" rmdir /s /q "%APPDATA%\Reak\Overwatch"'
+       Execute="deferred"
+       Impersonate="no"
+       Return="ignore"/>
+
 
     <InstallExecuteSequence>
       <Custom Action="DeleteUserData" After="RemoveFiles">REMOVE="ALL"</Custom>
