@@ -16,7 +16,7 @@ jobs:
 
     steps:
       # -----------------------------
-      # CHECKOUT REPO
+      # CHECKOUT
       # -----------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -63,12 +63,13 @@ jobs:
           cmake --build $env:BUILD_DIR --config Release
 
       # -----------------------------
-      # DEPLOY QT DEPENDENCIES
+      # QT DEPLOY
       # -----------------------------
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
           $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
+
           & "$QtBin\windeployqt.exe" `
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
@@ -85,11 +86,12 @@ jobs:
       - name: Prepare MSI layout folder
         shell: pwsh
         run: |
+          Remove-Item -Recurse -Force msi\layout -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force msi\layout | Out-Null
           Copy-Item "$env:BUILD_DIR\Release\*" "msi\layout" -Recurse -Force
 
       # -----------------------------
-      # RESTORE PFX CERTIFICATE
+      # RESTORE PFX CERT
       # -----------------------------
       - name: Restore PFX certificate
         shell: pwsh
@@ -97,9 +99,11 @@ jobs:
           $b64 = @"
           ${{ secrets.WINDOWS_CERT_PFX }}
           "@
+
           $bytes = [System.Convert]::FromBase64String($b64.Trim())
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           [System.IO.File]::WriteAllBytes($pfxPath, $bytes)
+
           echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
 
       # -----------------------------
@@ -107,18 +111,34 @@ jobs:
       # -----------------------------
       - name: Install WiX Toolset
         shell: pwsh
-        run: choco install wixtoolset -y
+        run: |
+          choco install wixtoolset -y
 
       # -----------------------------
-      # HARVEST FILES (heat)
+      # HARVEST FILES (FIXED GUID ISSUE ✅)
       # -----------------------------
-      - name: Harvest layout -> AppFiles.wxs
+      - name: Harvest layout -> AppFiles.wxs (FIXED)
         shell: pwsh
         run: |
+          Remove-Item -Force msi\AppFiles.wxs -ErrorAction SilentlyContinue
+
           $heat = Get-ChildItem -Path "C:\" -Recurse -Filter heat.exe -ErrorAction SilentlyContinue |
-                  Sort-Object FullName | Select-Object -First 1
-          if (-not $heat) { Write-Error "heat.exe not found!"; exit 1 }
-          & $heat.FullName dir "msi\layout" -ag -srd -cg AppFiles -dr INSTALLDIR -var var.LayoutDir -out "msi\AppFiles.wxs"
+                  Sort-Object FullName |
+                  Select-Object -First 1
+
+          if (-not $heat) {
+            Write-Error "❌ heat.exe not found!"
+            exit 1
+          }
+
+          & $heat.FullName dir "msi\layout" `
+            -ag `
+            -gg `
+            -srd `
+            -cg AppFiles `
+            -dr INSTALLDIR `
+            -var var.LayoutDir `
+            -out "msi\AppFiles.wxs"
 
       # -----------------------------
       # BUILD MSI
@@ -131,15 +151,25 @@ jobs:
           light msi\Overwatch.wixobj msi\AppFiles.wixobj -out msi\Overwatch.msi
 
       # -----------------------------
-      # SIGN MSI
+      # FIND SIGNTOOL
       # -----------------------------
       - name: Find signtool
         shell: pwsh
         run: |
           $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter signtool.exe |
-                      Sort-Object FullName | Select-Object -First 1
+                      Sort-Object FullName |
+                      Select-Object -First 1
+
+          if (-not $signtool) {
+            Write-Error "signtool.exe not found"
+            exit 1
+          }
+
           echo "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
 
+      # -----------------------------
+      # SIGN MSI
+      # -----------------------------
       - name: Sign MSI
         shell: pwsh
         env:
@@ -154,7 +184,7 @@ jobs:
             "msi\Overwatch.msi"
 
       # -----------------------------
-      # UPLOAD MSI ARTIFACT
+      # UPLOAD ARTIFACT
       # -----------------------------
       - name: Upload MSI Artifact
         uses: actions/upload-artifact@v4
