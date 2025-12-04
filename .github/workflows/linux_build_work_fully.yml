@@ -94,9 +94,6 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
           echo "Executable: $EXE"
 
-      # --------------------------------------------------
-      #             CREATE   D E B   PACKAGE
-      # --------------------------------------------------
 
       - name: Create DEB package structure
         run: |
@@ -194,9 +191,47 @@ jobs:
           PKG_DIR=$GITHUB_WORKSPACE/deb_build
           cat <<'EOF' > $PKG_DIR/DEBIAN/postrm
 
-          rm -rf /opt/project-overwatch
+          set -e
+
+          if [ "$1" = "purge" ]; then
+              echo "Purging Project Overwatch completely..."
+
+        # ✅ Remove system install
+              rm -rf /opt/project-overwatch
+
+        # ✅ Remove desktop entry
+              rm -f /usr/share/applications/appproject-overwatch.desktop
+
+        # ✅ Remove icon
+              rm -f /usr/share/icons/hicolor/256x256/apps/appproject-overwatch.png
+
+        # ✅ Remove user data for ALL users
+              for user_home in /home/*; do
+                  if [ -d "$user_home" ]; then
+                      rm -rf "$user_home/.config/ProjectOverwatch"
+                      rm -rf "$user_home/.cache/ProjectOverwatch"
+                      rm -rf "$user_home/.local/share/ProjectOverwatch"
+
+                # ✅ YOUR ACTUAL STORAGE PATH (from your error)
+                      rm -rf "$user_home/.local/share/Reak/Overwatch"
+                  fi
+              done
+
+        # ✅ Also remove root user's data (IMPORTANT)
+              rm -rf /root/.config/ProjectOverwatch
+              rm -rf /root/.cache/ProjectOverwatch
+              rm -rf /root/.local/share/ProjectOverwatch
+              rm -rf /root/.local/share/Reak/Overwatch
+
+        # ✅ Update desktop database
+              update-desktop-database || true
+          fi
+
+          exit 0
           EOF
           chmod 755 $PKG_DIR/DEBIAN/postrm
+
+
 
       - name: Build .deb
         run: |
