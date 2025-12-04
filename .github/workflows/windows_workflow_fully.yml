@@ -170,19 +170,12 @@ jobs:
           light msi\Overwatch.wixobj -o msi\Overwatch.msi
 
 
-
       # -----------------------------
-      # SIGN MSI
-      # -----------------------------
-      
-
-
-      # -----------------------------
-      # UPLOAD MSI
+      # UPLOAD MSI  ✅ FIXED PATH
       # -----------------------------
       - name: Upload MSI Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windows-MSI
-          path: Overwatch.msi
+          path: msi\Overwatch.msi
 
