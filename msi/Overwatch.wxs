@@ -15,7 +15,8 @@
     <MediaTemplate/>
 
     <!-- ============================= -->
-    <!-- STANDARD WINDOWS DIRECTORIES -->
+    <!-- INSTALL DIRECTORY -->
+    <!-- C:\Program Files\Reak\Overwatch -->
     <!-- ============================= -->
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -30,13 +31,6 @@
       <Directory Id="ProgramMenuFolder">
         <Directory Id="StartMenuDir" Name="Overwatch"/>
       </Directory>
-
-      <Directory Id="AppDataFolder">
-        <Directory Id="ReakData" Name="Reak">
-          <Directory Id="AppUserData" Name="Overwatch"/>
-        </Directory>
-      </Directory>
-
     </Directory>
 
     <!-- ============================= -->
@@ -95,26 +89,23 @@
     </Component>
 
     <!-- ============================= -->
-    <!-- REMOVE USER DATA ON UNINSTALL -->
+    <!-- UNINSTALL: DELETE APPDATA -->
+    <!-- EXACT MATCH TO YOUR NSIS -->
+    <!-- RMDir /r "$APPDATA\Reak\Overwatch" -->
     <!-- ============================= -->
 
-    <DirectoryRef Id="AppUserData">
-     <Component Id="UserDataFolder" Guid="*">
+    <Property Id="APPDATA_DIR" Value="[%APPDATA%]\Reak\Overwatch"/>
 
-      <RemoveFile Id="RemoveUserDataFiles" Name="*" On="uninstall"/>
+    <CustomAction
+      Id="DeleteUserData"
+      ExeCommand='cmd /c if exist "[APPDATA_DIR]" rmdir /s /q "[APPDATA_DIR]"'
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore"/>
 
-      <RemoveFolder Id="RemoveUserDataFolder" On="uninstall"/>
-
-     
-      <RegistryValue
-        Root="HKCU"
-        Key="Software\Reak\Overwatch"
-        Name="userdata"
-        Type="integer"
-        Value="1"
-        KeyPath="yes"/>
-     </Component>
-    </DirectoryRef>
+    <InstallExecuteSequence>
+      <Custom Action="DeleteUserData" After="RemoveFiles">REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
 
     <!-- ============================= -->
     <!-- FEATURES -->
@@ -125,8 +116,9 @@
       <ComponentRef Id="DesktopShortcut"/>
       <ComponentRef Id="StartMenuShortcut"/>
       <ComponentRef Id="StartupRegistry"/>
-      <ComponentRef Id="UserDataFolder"/>
     </Feature>
 
   </Product>
+
 </Wix>
+
