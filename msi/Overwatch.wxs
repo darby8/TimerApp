@@ -13,22 +13,27 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
 
     <!-- ============================= -->
-    <!-- INSTALL DIRECTORIES -->
+    <!-- ROOT DIRECTORIES (ALL REQUIRED) -->
     <!-- ============================= -->
 
     <Directory Id="TARGETDIR" Name="SourceDir">
+
+      <!-- Program Files -->
       <Directory Id="ProgramFilesFolder">
         <Directory Id="COMPANYDIR" Name="Reak">
           <Directory Id="INSTALLDIR" Name="Overwatch"/>
         </Directory>
       </Directory>
 
-    <Directory Id="ProgramMenuFolder">
-      <Directory Id="StartMenuDir" Name="Overwatch"/>
+      <!-- ✅ REQUIRED FOR DESKTOP SHORTCUT -->
+      <Directory Id="DesktopFolder"/>
+
+      <!-- ✅ REQUIRED FOR START MENU -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="StartMenuDir" Name="Overwatch"/>
+      </Directory>
+
     </Directory>
-  </Directory>
-
-
 
     <!-- ============================= -->
     <!-- MAIN APPLICATION -->
@@ -47,11 +52,18 @@
     <DirectoryRef Id="DesktopFolder">
       <Component Id="DesktopShortcut" Guid="*">
         <Shortcut
-          Id="DesktopShortcut"
+          Id="OverwatchDesktopShortcut"
           Name="Overwatch"
           Target="[INSTALLDIR]appproject-overwatch.exe"
           WorkingDirectory="INSTALLDIR"/>
-        <RegistryValue Root="HKLM" Key="Software\Reak\Overwatch" Name="desktop" Type="integer" Value="1" KeyPath="yes"/>
+
+        <RegistryValue
+          Root="HKLM"
+          Key="Software\Reak\Overwatch"
+          Name="desktop"
+          Type="integer"
+          Value="1"
+          KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
@@ -62,17 +74,25 @@
     <DirectoryRef Id="StartMenuDir">
       <Component Id="StartMenuShortcut" Guid="*">
         <Shortcut
-          Id="StartMenuShortcut"
+          Id="OverwatchStartMenuShortcut"
           Name="Overwatch"
           Target="[INSTALLDIR]appproject-overwatch.exe"
           WorkingDirectory="INSTALLDIR"/>
+
         <RemoveFolder Id="RemoveStartMenuDir" On="uninstall"/>
-        <RegistryValue Root="HKLM" Key="Software\Reak\Overwatch" Name="startmenu" Type="integer" Value="1" KeyPath="yes"/>
+
+        <RegistryValue
+          Root="HKLM"
+          Key="Software\Reak\Overwatch"
+          Name="startmenu"
+          Type="integer"
+          Value="1"
+          KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
     <!-- ============================= -->
-    <!-- AUTO START (ALL USERS) -->
+    <!-- STARTUP ON BOOT (ALL USERS) -->
     <!-- ============================= -->
 
     <Component Id="StartupRegistry" Directory="TARGETDIR" Guid="*">
@@ -87,6 +107,7 @@
 
     <!-- ============================= -->
     <!-- UNINSTALL: DELETE APPDATA -->
+    <!-- MATCHES YOUR NSIS -->
     <!-- ============================= -->
 
     <Property Id="CMD_EXE" Value="cmd.exe"/>
