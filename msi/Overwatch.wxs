@@ -23,10 +23,12 @@
         </Directory>
       </Directory>
 
-      <Directory Id="ProgramMenuFolder">
-        <Directory Id="StartMenuDir" Name="Overwatch"/>
-      </Directory>
+    <Directory Id="ProgramMenuFolder">
+      <Directory Id="StartMenuDir" Name="Overwatch"/>
     </Directory>
+  </Directory>
+
+
 
     <!-- ============================= -->
     <!-- MAIN APPLICATION -->
