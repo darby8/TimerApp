@@ -9,31 +9,50 @@
     Manufacturer="Reak"
     UpgradeCode="7F6B4E8D-1A3C-4F28-9E53-9C5B8A2E41D7">
 
-    <Package
-      InstallerVersion="500"
-      Compressed="yes"
-      InstallScope="perMachine" />
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
-    <MediaTemplate />
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
+    <MediaTemplate/>
 
-    <!-- INSTALL DIR: C:\Program Files\Reak\Overwatch -->
+    <!-- ============================= -->
+    <!-- STANDARD WINDOWS DIRECTORIES -->
+    <!-- ============================= -->
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder">
         <Directory Id="COMPANYDIR" Name="Reak">
           <Directory Id="INSTALLDIR" Name="Overwatch"/>
         </Directory>
       </Directory>
+
+      <Directory Id="DesktopFolder"/>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="StartMenuDir" Name="Overwatch"/>
+      </Directory>
+
+      <Directory Id="AppDataFolder">
+        <Directory Id="ReakData" Name="Reak">
+          <Directory Id="AppUserData" Name="Overwatch"/>
+        </Directory>
+      </Directory>
+
     </Directory>
 
-    <!-- APP FILES -->
+    <!-- ============================= -->
+    <!-- MAIN APPLICATION FILE -->
+    <!-- ============================= -->
+
     <DirectoryRef Id="INSTALLDIR">
       <Component Id="MainExecutable" Guid="*">
         <File Source="msi\layout\appproject-overwatch.exe" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
+    <!-- ============================= -->
     <!-- DESKTOP SHORTCUT -->
+    <!-- ============================= -->
+
     <DirectoryRef Id="DesktopFolder">
       <Component Id="DesktopShortcut" Guid="*">
         <Shortcut
@@ -41,25 +60,31 @@
           Name="Overwatch"
           Target="[INSTALLDIR]appproject-overwatch.exe"
           WorkingDirectory="INSTALLDIR"/>
-        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="desktop" Type="integer" Value="1" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
+    <!-- ============================= -->
     <!-- START MENU SHORTCUT -->
-    <DirectoryRef Id="ProgramMenuFolder">
+    <!-- ============================= -->
+
+    <DirectoryRef Id="StartMenuDir">
       <Component Id="StartMenuShortcut" Guid="*">
         <Shortcut
           Id="StartMenuShortcut"
           Name="Overwatch"
-          Directory="ProgramMenuFolder"
-          Target="[INSTALLDIR]appproject-overwatch.exe"/>
-        <RemoveFolder Id="RemoveProgramMenuFolder" On="uninstall"/>
-        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="sm" Type="integer" Value="1" KeyPath="yes"/>
+          Target="[INSTALLDIR]appproject-overwatch.exe"
+          WorkingDirectory="INSTALLDIR"/>
+        <RemoveFolder Id="RemoveStartMenuDir" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="startmenu" Type="integer" Value="1" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
+    <!-- ============================= -->
     <!-- AUTO START (ALL USERS) -->
-    <Component Id="StartupRegistry" Guid="*" Directory="TARGETDIR">
+    <!-- ============================= -->
+
+    <Component Id="StartupRegistry" Directory="TARGETDIR" Guid="*">
       <RegistryValue
         Root="HKLM"
         Key="Software\Microsoft\Windows\CurrentVersion\Run"
@@ -69,26 +94,27 @@
         KeyPath="yes"/>
     </Component>
 
+    <!-- ============================= -->
     <!-- REMOVE USER DATA ON UNINSTALL -->
-    <Property Id="APPDATAFOLDER" Value="[AppDataFolder]Reak\Overwatch"/>
+    <!-- ============================= -->
 
-    <CustomAction
-      Id="RemoveUserData"
-      Directory="APPDATAFOLDER"
-      ExeCommand="cmd /c rmdir /s /q &quot;[APPDATAFOLDER]&quot;"
-      Execute="deferred"
-      Return="ignore" />
+    <DirectoryRef Id="AppUserData">
+      <Component Id="UserDataFolder" Guid="*">
+        <RemoveFolder Id="RemoveUserData" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="userdata" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
 
-    <InstallExecuteSequence>
-      <Custom Action="RemoveUserData" After="RemoveFiles">REMOVE="ALL"</Custom>
-    </InstallExecuteSequence>
-
+    <!-- ============================= -->
     <!-- FEATURES -->
+    <!-- ============================= -->
+
     <Feature Id="MainFeature" Title="Overwatch" Level="1">
       <ComponentRef Id="MainExecutable"/>
       <ComponentRef Id="DesktopShortcut"/>
       <ComponentRef Id="StartMenuShortcut"/>
       <ComponentRef Id="StartupRegistry"/>
+      <ComponentRef Id="UserDataFolder"/>
     </Feature>
 
   </Product>
