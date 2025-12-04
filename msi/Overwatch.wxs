@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <Product
@@ -12,11 +11,9 @@
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
     <MediaTemplate EmbedCab="yes"/>
     <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
-    <MediaTemplate/>
 
     <!-- ============================= -->
-    <!-- INSTALL DIRECTORY -->
-    <!-- C:\Program Files\Reak\Overwatch -->
+    <!-- INSTALL DIRECTORIES -->
     <!-- ============================= -->
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -26,15 +23,13 @@
         </Directory>
       </Directory>
 
-      <Directory Id="DesktopFolder"/>
-
       <Directory Id="ProgramMenuFolder">
         <Directory Id="StartMenuDir" Name="Overwatch"/>
       </Directory>
     </Directory>
 
     <!-- ============================= -->
-    <!-- MAIN APPLICATION FILE -->
+    <!-- MAIN APPLICATION -->
     <!-- ============================= -->
 
     <DirectoryRef Id="INSTALLDIR">
@@ -54,7 +49,7 @@
           Name="Overwatch"
           Target="[INSTALLDIR]appproject-overwatch.exe"
           WorkingDirectory="INSTALLDIR"/>
-        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="desktop" Type="integer" Value="1" KeyPath="yes"/>
+        <RegistryValue Root="HKLM" Key="Software\Reak\Overwatch" Name="desktop" Type="integer" Value="1" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
@@ -70,7 +65,7 @@
           Target="[INSTALLDIR]appproject-overwatch.exe"
           WorkingDirectory="INSTALLDIR"/>
         <RemoveFolder Id="RemoveStartMenuDir" On="uninstall"/>
-        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="startmenu" Type="integer" Value="1" KeyPath="yes"/>
+        <RegistryValue Root="HKLM" Key="Software\Reak\Overwatch" Name="startmenu" Type="integer" Value="1" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
@@ -90,24 +85,17 @@
 
     <!-- ============================= -->
     <!-- UNINSTALL: DELETE APPDATA -->
-    <!-- EXACT MATCH TO YOUR NSIS -->
-    <!-- RMDir /r "$APPDATA\Reak\Overwatch" -->
     <!-- ============================= -->
 
-    <Property Id="APPDATA_DIR" Value="[%APPDATA%]\Reak\Overwatch"/>
-    
-    <!-- Property that explicitly points to cmd.exe -->
     <Property Id="CMD_EXE" Value="cmd.exe"/>
 
-<!-- Uninstall cleanup (EXACT NSIS BEHAVIOR) -->
     <CustomAction
-       Id="DeleteUserData"
-       Property="CMD_EXE"
-       ExeCommand='/c if exist "%APPDATA%\Reak\Overwatch" rmdir /s /q "%APPDATA%\Reak\Overwatch"'
-       Execute="deferred"
-       Impersonate="no"
-       Return="ignore"/>
-
+      Id="DeleteUserData"
+      Property="CMD_EXE"
+      ExeCommand='/c if exist "%APPDATA%\Reak\Overwatch" rmdir /s /q "%APPDATA%\Reak\Overwatch"'
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore"/>
 
     <InstallExecuteSequence>
       <Custom Action="DeleteUserData" After="RemoveFiles">REMOVE="ALL"</Custom>
@@ -127,4 +115,3 @@
   </Product>
 
 </Wix>
-
