@@ -15,15 +15,13 @@ jobs:
       APP_NAME: appproject-overwatch.exe
 
     steps:
-
       # -----------------------------
-      # CHECKOUT
+      # CHECKOUT REPO
       # -----------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
 
       # -----------------------------
       # INSTALL PYTHON + AQT
@@ -33,7 +31,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install aqtinstall==3.3.0
-
 
       # -----------------------------
       # INSTALL QT
@@ -48,7 +45,6 @@ jobs:
             --modules qtcharts qtmultimedia qtshadertools qtpositioning qtwebchannel qtwebengine qtwebview
 
           echo "CMAKE_PREFIX_PATH=$qtBase\$env:QT_VERSION\msvc2019_64" | Out-File -Append $env:GITHUB_ENV
-
 
       # -----------------------------
       # CONFIGURE + BUILD
@@ -66,15 +62,13 @@ jobs:
         run: |
           cmake --build $env:BUILD_DIR --config Release
 
-
       # -----------------------------
-      # QT DEPLOY
+      # DEPLOY QT DEPENDENCIES
       # -----------------------------
       - name: Deploy Qt (windeployqt)
         shell: pwsh
         run: |
           $QtBin = "$env:CMAKE_PREFIX_PATH\bin"
-
           & "$QtBin\windeployqt.exe" `
             "$env:BUILD_DIR\Release\$env:APP_NAME" `
             --release `
@@ -85,7 +79,6 @@ jobs:
         run: |
           xcopy QML "$env:BUILD_DIR\Release\QML" /E /I /Y
 
-
       # -----------------------------
       # PREPARE MSI LAYOUT
       # -----------------------------
@@ -95,9 +88,8 @@ jobs:
           New-Item -ItemType Directory -Force msi\layout | Out-Null
           Copy-Item "$env:BUILD_DIR\Release\*" "msi\layout" -Recurse -Force
 
-
       # -----------------------------
-      # RESTORE PFX CERT
+      # RESTORE PFX CERTIFICATE
       # -----------------------------
       - name: Restore PFX certificate
         shell: pwsh
@@ -105,82 +97,49 @@ jobs:
           $b64 = @"
           ${{ secrets.WINDOWS_CERT_PFX }}
           "@
-
           $bytes = [System.Convert]::FromBase64String($b64.Trim())
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           [System.IO.File]::WriteAllBytes($pfxPath, $bytes)
-
           echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
-
 
       # -----------------------------
       # INSTALL WIX
       # -----------------------------
       - name: Install WiX Toolset
         shell: pwsh
-        run: |
-          choco install wixtoolset -y
-
+        run: choco install wixtoolset -y
 
       # -----------------------------
-      # HARVEST FILES
+      # HARVEST FILES (heat)
       # -----------------------------
-      - name: Harvest layout (heat) -> AppFiles.wxs
+      - name: Harvest layout -> AppFiles.wxs
         shell: pwsh
         run: |
-          Write-Host "Searching for heat.exe..."
-
           $heat = Get-ChildItem -Path "C:\" -Recurse -Filter heat.exe -ErrorAction SilentlyContinue |
-                  Sort-Object FullName |
-                  Select-Object -First 1
-
-          if (-not $heat) {
-            Write-Error "❌ heat.exe not found anywhere on system!"
-            exit 1
-          }
-
-          Write-Host "✅ heat.exe found at: $($heat.FullName)"
-
-          & $heat.FullName dir "msi\layout" `
-            -ag -srd -cg AppFiles `
-            -dr INSTALLDIR `
-            -var var.LayoutDir `
-            -out "msi\AppFiles.wxs"
-
-
+                  Sort-Object FullName | Select-Object -First 1
+          if (-not $heat) { Write-Error "heat.exe not found!"; exit 1 }
+          & $heat.FullName dir "msi\layout" -ag -srd -cg AppFiles -dr INSTALLDIR -var var.LayoutDir -out "msi\AppFiles.wxs"
 
       # -----------------------------
       # BUILD MSI
       # -----------------------------
-      - name: Compile + Link MSI (candle + light)
+      - name: Compile + Link MSI
         shell: pwsh
         run: |
           candle msi\Overwatch.wxs -dLayoutDir="msi\layout" -out msi\Overwatch.wixobj
           candle msi\AppFiles.wxs -dLayoutDir="msi\layout" -out msi\AppFiles.wixobj
           light msi\Overwatch.wixobj msi\AppFiles.wixobj -out msi\Overwatch.msi
 
-
       # -----------------------------
-      # FIND SIGNTOOL
+      # SIGN MSI
       # -----------------------------
       - name: Find signtool
         shell: pwsh
         run: |
           $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter signtool.exe |
-                      Sort-Object FullName |
-                      Select-Object -First 1
-
-          if (-not $signtool) {
-            Write-Error "signtool.exe not found"
-            exit 1
-          }
-
+                      Sort-Object FullName | Select-Object -First 1
           echo "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
 
-
-      # -----------------------------
-      # SIGN MSI
-      # -----------------------------
       - name: Sign MSI
         shell: pwsh
         env:
@@ -194,9 +153,8 @@ jobs:
             /tr http://timestamp.digicert.com `
             "msi\Overwatch.msi"
 
-
       # -----------------------------
-      # UPLOAD ARTIFACT
+      # UPLOAD MSI ARTIFACT
       # -----------------------------
       - name: Upload MSI Artifact
         uses: actions/upload-artifact@v4
