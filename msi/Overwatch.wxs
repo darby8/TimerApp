@@ -99,10 +99,21 @@
     <!-- ============================= -->
 
     <DirectoryRef Id="AppUserData">
-      <Component Id="UserDataFolder" Guid="*">
-        <RemoveFolder Id="RemoveUserData" On="uninstall"/>
-        <RegistryValue Root="HKCU" Key="Software\Reak\Overwatch" Name="userdata" Type="integer" Value="1" KeyPath="yes"/>
-      </Component>
+     <Component Id="UserDataFolder" Guid="*">
+
+      <RemoveFile Id="RemoveUserDataFiles" Name="*" On="uninstall"/>
+
+      <RemoveFolder Id="RemoveUserDataFolder" On="uninstall"/>
+
+     
+      <RegistryValue
+        Root="HKCU"
+        Key="Software\Reak\Overwatch"
+        Name="userdata"
+        Type="integer"
+        Value="1"
+        KeyPath="yes"/>
+     </Component>
     </DirectoryRef>
 
     <!-- ============================= -->
