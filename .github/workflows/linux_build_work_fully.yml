@@ -76,16 +76,17 @@ jobs:
       # ✅ EXACT SAME STRUCTURE AS .DEB
       - name: Create AppDir (FULL SAFE STRUCTURE)
         run: |
-    
+
           mkdir -p $APP_DIR/opt/project-overwatch/bin
           mkdir -p $APP_DIR/opt/project-overwatch/lib
           mkdir -p $APP_DIR/opt/project-overwatch/plugins
           mkdir -p $APP_DIR/opt/project-overwatch/qml
           mkdir -p $APP_DIR/usr/share/applications
           mkdir -p $APP_DIR/usr/share/icons/hicolor/256x256/apps
+
+
           cp "$EXE" $APP_DIR/opt/project-overwatch/bin/$APP_NAME
           chmod +x $APP_DIR/opt/project-overwatch/bin/$APP_NAME
-
           QT_DIR=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64
 
           cp -r $QT_DIR/lib/*        $APP_DIR/opt/project-overwatch/lib/
@@ -113,6 +114,7 @@ jobs:
           Type=Application
           Categories=Utility;
           EOF
+
 
 
 
