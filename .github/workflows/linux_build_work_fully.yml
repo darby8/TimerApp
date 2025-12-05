@@ -105,7 +105,6 @@ jobs:
           cp icons/$APP_NAME.png \
              $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
 
-    # ✅ Desktop entry (must match AppDir Exec)
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
           [Desktop Entry]
           Name=Project Overwatch
