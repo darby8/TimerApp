@@ -257,7 +257,18 @@ jobs:
           }
           EOF
 
-          cp *.AppImage installer/input/packages/com.project.overwatch/data/project-overwatch.AppImage
+          # ✅ Safely copy the exact AppImage built earlier
+          mkdir -p installer/input/packages/com.project.overwatch/data
+
+          if [ -f "$APPIMAGE" ]; then
+          cp "$APPIMAGE" installer/input/packages/com.project.overwatch/data/project-overwatch.AppImage
+          echo "✅ Copied $APPIMAGE successfully"
+          else
+            echo "❌ ERROR: AppImage not found!"
+            ls -lah
+            exit 1
+          fi
+
 
       - name: Install QtIFW
         run: |
