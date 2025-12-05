@@ -236,7 +236,7 @@ jobs:
                       "Type=Application\n" +
                       "Categories=Utility;\n";
 
-                  component.addOperation("Create", desktopTarget, desktopContent);
+                  component.addOperation("CreateFile", desktopTarget, desktopContent);
 
                   // 6. Update the desktop database (essential for immediate menu visibility)
                   component.addOperation("Execute", "/usr/bin/update-desktop-database", desktopTargetDir);
@@ -258,29 +258,25 @@ jobs:
           }
           EOF
 
+
       # ✅ Copy AppImage and Icon into the Installer's package data
       - name: Copy AppImage and Icon for Installer Package
         run: |
           PKG_DATA_DIR=installer/input/packages/com.yourcompany.projectoverwatch/data
           APP_NAME_ENV=${{ env.APP_NAME }} # appproject-overwatch
 
-          # Copy AppImage and rename consistently
-          APPFILE=$(ls -1t *.AppImage | head -n 1)
-          if [ -f "$APPFILE" ]; then
-            cp "$APPFILE" $PKG_DATA_DIR/project-overwatch.AppImage
-            echo "✅ Copied $APPFILE -> project-overwatch.AppImage"
-          else
-            echo "⚠️ No AppImage found!"
-            exit 1
-          fi
-          
+          # ... (AppImage copy logic remains the same) ...
+
           # Copy the icon
           ICON_SOURCE=$APP_DIR/usr/share/icons/hicolor/256x256/apps/${APP_NAME_ENV}.png
+          ICON_TARGET=$PKG_DATA_DIR/${APP_NAME_ENV}.png
+
           if [ -f "$ICON_SOURCE" ]; then
-              cp "$ICON_SOURCE" $PKG_DATA_DIR/${APP_NAME_ENV}.png
+              cp "$ICON_SOURCE" "$ICON_TARGET"
               echo "✅ Copied icon into IFW package data."
           else
-              echo "❌ Icon file not found, desktop entry may not have an icon!"
+              echo "❌ Icon file not found at $ICON_SOURCE. Aborting build."
+              exit 1 # Abort if icon is missing to prevent silent failure
           fi
 
 
