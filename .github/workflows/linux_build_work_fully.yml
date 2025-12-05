@@ -207,10 +207,10 @@ jobs:
               <Title>Project Overwatch</Title>
               <Publisher>Reak</Publisher>
               <TargetDir>/opt/project-overwatch</TargetDir>
-              <RequiresAdminRights>true</RequiresAdminRights>
               <RunProgram>/opt/project-overwatch/project-overwatch.AppImage</RunProgram>
           </Installer>
           EOF
+
 
           cat <<EOF > installer/input/packages/com.project.overwatch/meta/package.xml
           <?xml version="1.0" encoding="UTF-8"?>
