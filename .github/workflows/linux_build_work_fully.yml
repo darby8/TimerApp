@@ -74,18 +74,25 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
 
       # ✅ EXACT SAME STRUCTURE AS .DEB
-      - name: Create AppDir (MATCH .DEB STRUCTURE)
+      - name: Create AppDir (FULL SAFE STRUCTURE)
         run: |
-          # ✅ Create SAME paths as .deb but inside AppDir
+    
           mkdir -p $APP_DIR/opt/project-overwatch/bin
+          mkdir -p $APP_DIR/opt/project-overwatch/lib
+          mkdir -p $APP_DIR/opt/project-overwatch/plugins
+          mkdir -p $APP_DIR/opt/project-overwatch/qml
           mkdir -p $APP_DIR/usr/share/applications
           mkdir -p $APP_DIR/usr/share/icons/hicolor/256x256/apps
-
-          # ✅ Copy real binary
           cp "$EXE" $APP_DIR/opt/project-overwatch/bin/$APP_NAME
           chmod +x $APP_DIR/opt/project-overwatch/bin/$APP_NAME
 
-          # ✅ Create SAME wrapper as .deb INSIDE AppDir
+          QT_DIR=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64
+
+          cp -r $QT_DIR/lib/*        $APP_DIR/opt/project-overwatch/lib/
+          cp -r $QT_DIR/plugins/*   $APP_DIR/opt/project-overwatch/plugins/
+          cp -r $QT_DIR/qml/*       $APP_DIR/opt/project-overwatch/qml/
+
+
           cat <<EOF > $APP_DIR/opt/project-overwatch/bin/run-${APP_NAME}.sh
           export LD_LIBRARY_PATH=/opt/project-overwatch/lib:\$LD_LIBRARY_PATH
           export QT_PLUGIN_PATH=/opt/project-overwatch/plugins
@@ -95,11 +102,10 @@ jobs:
           EOF
           chmod +x $APP_DIR/opt/project-overwatch/bin/run-${APP_NAME}.sh
 
-          # ✅ ICON (same as deb)
           cp icons/$APP_NAME.png \
              $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
 
-          # ✅ DESKTOP FILE — SAME AS .DEB BUT NOW IT EXISTS IN APPDIR
+    # ✅ Desktop entry (must match AppDir Exec)
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
           [Desktop Entry]
           Name=Project Overwatch
@@ -108,6 +114,7 @@ jobs:
           Type=Application
           Categories=Utility;
           EOF
+
 
 
       # ✅ COPY FULL QT (SAME AS .DEB)
