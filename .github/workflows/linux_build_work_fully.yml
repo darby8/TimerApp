@@ -74,38 +74,41 @@ jobs:
           echo "EXE=$EXE" >> $GITHUB_ENV
 
       # ✅ EXACT SAME STRUCTURE AS .DEB
-      - name: Create AppDir
+      - name: Create AppDir (MATCH .DEB STRUCTURE)
         run: |
+          # ✅ Create SAME paths as .deb but inside AppDir
           mkdir -p $APP_DIR/opt/project-overwatch/bin
-          mkdir -p $APP_DIR/opt/project-overwatch/lib
-          mkdir -p $APP_DIR/opt/project-overwatch/plugins
-          mkdir -p $APP_DIR/opt/project-overwatch/qml
           mkdir -p $APP_DIR/usr/share/applications
           mkdir -p $APP_DIR/usr/share/icons/hicolor/256x256/apps
 
+          # ✅ Copy real binary
           cp "$EXE" $APP_DIR/opt/project-overwatch/bin/$APP_NAME
           chmod +x $APP_DIR/opt/project-overwatch/bin/$APP_NAME
 
-          cat <<EOF > $APP_DIR/opt/project-overwatch/bin/run-$APP_NAME.sh
+          # ✅ Create SAME wrapper as .deb INSIDE AppDir
+          cat <<EOF > $APP_DIR/opt/project-overwatch/bin/run-${APP_NAME}.sh
           export LD_LIBRARY_PATH=/opt/project-overwatch/lib:\$LD_LIBRARY_PATH
           export QT_PLUGIN_PATH=/opt/project-overwatch/plugins
           export QT_QPA_PLATFORM_PLUGIN_PATH=/opt/project-overwatch/plugins/platforms
           export QML2_IMPORT_PATH=/opt/project-overwatch/qml
-          exec /opt/project-overwatch/bin/$APP_NAME "\$@"
+          exec /opt/project-overwatch/bin/${APP_NAME} "\$@"
           EOF
-          chmod +x $APP_DIR/opt/project-overwatch/bin/run-$APP_NAME.sh
+          chmod +x $APP_DIR/opt/project-overwatch/bin/run-${APP_NAME}.sh
 
+          # ✅ ICON (same as deb)
           cp icons/$APP_NAME.png \
              $APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png
 
+          # ✅ DESKTOP FILE — SAME AS .DEB BUT NOW IT EXISTS IN APPDIR
           cat <<EOF > $APP_DIR/usr/share/applications/$APP_NAME.desktop
           [Desktop Entry]
           Name=Project Overwatch
-          Exec=/opt/project-overwatch/bin/run-$APP_NAME.sh
-          Icon=$APP_NAME
+          Exec=/opt/project-overwatch/bin/run-${APP_NAME}.sh
+          Icon=${APP_NAME}
           Type=Application
           Categories=Utility;
           EOF
+
 
       # ✅ COPY FULL QT (SAME AS .DEB)
       - name: Copy Qt Runtime
