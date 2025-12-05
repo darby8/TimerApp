@@ -185,10 +185,25 @@ jobs:
           Terminal=false
           EOF
 
-      - name: Install Qt Installer Framework
+      - name: Install Qt Installer Framework (SAFE AUTO VERSION)
         run: |
           pip install aqtinstall==3.1.18 --root-user-action=ignore
-          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
+
+          echo "🔍 Listing available IFW versions..."
+          python3 -m aqt list-tool linux desktop tools_ifw > ifw_versions.txt
+          cat ifw_versions.txt
+
+          IFW_VERSION=$(grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' ifw_versions.txt | tail -n 1)
+
+          if [ -z "$IFW_VERSION" ]; then
+            echo "❌ No valid IFW version found!"
+            exit 1
+          fi
+
+          echo "✅ Using IFW version: $IFW_VERSION"
+
+          python3 -m aqt install-tool linux desktop tools_ifw $IFW_VERSION --outputdir QtIFW
+
 
       - name: Build GUI Installer
         run: |
