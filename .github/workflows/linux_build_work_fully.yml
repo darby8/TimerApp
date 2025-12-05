@@ -163,9 +163,6 @@ jobs:
           name: project-overwatch-Linux-AppImage
           path: "*.AppImage"
 
-      ---
-      # 🛠️ QT INSTALLER FRAMEWORK (QtIFW) STEPS
-      ---
       - name: Prepare Qt Installer Framework structure
         run: |
           mkdir -p installer/input/config
