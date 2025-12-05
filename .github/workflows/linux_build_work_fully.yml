@@ -16,46 +16,58 @@ jobs:
       BUILD_DIR: build
       APP_NAME: appproject-overwatch
       APP_DIR: AppDir
-      APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
       - name: Install Git
         run: |
           apt-get update
-          apt-get install -y git software-properties-common
+          apt-get install -y software-properties-common
+          add-apt-repository ppa:git-core/ppa -y
+          apt-get update
+          apt-get install -y git
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
+
+      - name: Prepare environment
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y tzdata locales
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
 
       - name: Install dependencies
         run: |
-          apt-get update
           apt-get install -y \
             build-essential cmake ninja-build patchelf wget curl imagemagick \
-            libgl1-mesa-dev libegl1 libxkbcommon-dev libglib2.0-0 \
+            libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-dev \
             libdbus-1-dev libfontconfig1-dev libxcb1-dev libx11-xcb-dev \
-            libxrender1 libxrandr2 libxtst-dev libxt-dev libxinerama-dev \
-            python3 python3-pip
+            libxtst-dev libxt-dev libxinerama-dev
 
-      - name: Install aqt
+      - name: Install Python & aqt
         run: |
+          apt-get install -y python3 python3-pip
           pip3 install --upgrade pip
           pip3 install aqtinstall==3.1.18
 
       - name: Install Qt
         run: |
-          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 --outputdir Qt
+          python3 -m aqt install-qt linux desktop $QT_VERSION gcc_64 \
+            --outputdir Qt \
+            --modules qtcharts qtmultimedia qtwebengine qtserialport
           echo "CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64" >> $GITHUB_ENV
 
-      - name: Configure
+      - name: Configure CMake
         run: |
           cmake -S . -B $BUILD_DIR -G Ninja \
             -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
             -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build
+      - name: Build Project
         run: cmake --build $BUILD_DIR --parallel
 
       - name: Detect executable
@@ -73,24 +85,22 @@ jobs:
           [Desktop Entry]
           Name=Project Overwatch
           Exec=$APP_NAME
-          Icon=project-overwatch
+          Icon=$APP_NAME
           Type=Application
           Categories=Utility;
           EOF
 
       - name: Download linuxdeployqt
         run: |
-          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
-          chmod +x linuxdeployqt-continuous-x86_64.AppImage
+          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt
+          chmod +x linuxdeployqt
 
       - name: Build AppImage
         run: |
           export PATH="$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin:$PATH"
-          ./linuxdeployqt-continuous-x86_64.AppImage \
-            $APP_DIR/usr/share/applications/$APP_NAME.desktop \
-            -qmake=$GITHUB_WORKSPACE/Qt/$QT_VERSION/gcc_64/bin/qmake \
-            -bundle-non-qt-libs \
-            -appimage
+          ./linuxdeployqt $APP_DIR/usr/share/applications/$APP_NAME.desktop -appimage
+          APPIMAGE=$(ls *.AppImage)
+          echo "APPIMAGE=$APPIMAGE" >> $GITHUB_ENV
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
@@ -98,61 +108,78 @@ jobs:
           name: project-overwatch-AppImage
           path: "*.AppImage"
 
-# ================= SYSTEM-WIDE GUI INSTALLER =================
-
-      - name: Prepare IFW Structure
+      # ✅✅✅ SYSTEM-WIDE INSTALLER CONFIG
+      - name: Prepare QtIFW Installer
         run: |
-          mkdir -p installer/config
-          mkdir -p installer/packages/com.overwatch/meta
-          mkdir -p installer/packages/com.overwatch/data
+          mkdir -p installer/input/config
+          mkdir -p installer/input/packages/com.project.overwatch/meta
+          mkdir -p installer/input/packages/com.project.overwatch/data
 
-          cat <<EOF > installer/config/config.xml
-          <?xml version="1.0"?>
+          cat <<EOF > installer/input/config/config.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
               <Name>Project Overwatch</Name>
               <Version>1.0.0</Version>
               <Title>Project Overwatch</Title>
               <Publisher>Your Company</Publisher>
+              <RequiresAdminRights>true</RequiresAdminRights>
               <TargetDir>/opt/project-overwatch</TargetDir>
-              <RunProgram>/opt/project-overwatch/project-overwatch.AppImage</RunProgram>
           </Installer>
           EOF
 
-          cat <<EOF > installer/packages/com.overwatch/meta/package.xml
-          <?xml version="1.0"?>
+          cat <<EOF > installer/input/packages/com.project.overwatch/meta/package.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <Package>
               <DisplayName>Project Overwatch</DisplayName>
               <Version>1.0.0</Version>
               <Default>true</Default>
+              <Script>installscript.qs</Script>
           </Package>
           EOF
 
-          APPIMAGE=$(ls *.AppImage | head -n 1)
-          cp "$APPIMAGE" installer/packages/com.overwatch/data/project-overwatch.AppImage
+          cat <<'EOF' > installer/input/packages/com.project.overwatch/meta/installscript.qs
+          function Component() {}
 
-          cat <<EOF > installer/packages/com.overwatch/data/project-overwatch.desktop
-          [Desktop Entry]
-          Name=Project Overwatch
-          Exec=/opt/project-overwatch/project-overwatch.AppImage
-          Type=Application
-          Categories=Utility;
-          Terminal=false
+          Component.prototype.createOperations = function() {
+              component.createOperations();
+              var targetDir = installer.value("TargetDir");
+              var appPath = targetDir + "/project-overwatch.AppImage";
+
+              component.addOperation("Execute", "/bin/chmod", "+x", appPath);
+
+              var desktop =
+                  "[Desktop Entry]\n" +
+                  "Name=Project Overwatch\n" +
+                  "Exec=" + appPath + "\n" +
+                  "Type=Application\n" +
+                  "Categories=Utility;\n";
+
+              component.addOperation("WriteFile", "/usr/share/applications/project-overwatch.desktop", desktop);
+              component.addOperation("Execute", "/bin/chmod", "644", "/usr/share/applications/project-overwatch.desktop");
+
+              component.addOperation("Execute", "/bin/ln", "-sf", appPath, "/usr/local/bin/project-overwatch");
+          };
+
+          Component.prototype.installationFinished = function() {
+              QProcess.startDetached(installer.value("TargetDir") + "/project-overwatch.AppImage", []);
+          };
           EOF
 
-      - name: Install Qt IFW (WORKING FIX)
+          cp *.AppImage installer/input/packages/com.project.overwatch/data/project-overwatch.AppImage
+
+      - name: Install QtIFW
         run: |
-          python3 -m aqt install-tool linux desktop qt.tools.ifw.47 --outputdir QtIFW
+          python3 -m aqt install-tool linux desktop tools_ifw 4.6.1 --outputdir QtIFW
 
       - name: Build GUI Installer
         run: |
-          QtIFW/*/bin/binarycreator \
-            -c installer/config/config.xml \
-            -p installer/packages \
-            project-overwatch-installer.run
+          IFW_PATH=$(find QtIFW -name binarycreator -type f | head -n 1 | xargs dirname)
+          $IFW_PATH/binarycreator -c installer/input/config/config.xml \
+          -p installer/input/packages project-overwatch-installer.run
 
       - name: Upload GUI Installer
         uses: actions/upload-artifact@v4
         with:
-          name: project-overwatch-GUI-Installer
+          name: project-overwatch-System-Installer
           path: project-overwatch-installer.run
 
