@@ -199,29 +199,19 @@ jobs:
           mkdir -p installer/input/config
           mkdir -p installer/input/packages/com.project.overwatch/meta
           mkdir -p installer/input/packages/com.project.overwatch/data
-
-          cat <<EOF > installer/input/config/config.xml
-          <?xml version="1.0" encoding="UTF-8"?>
+          cat > installer/input/config/config.xml <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <Installer>
               <Name>Project Overwatch</Name>
               <Version>1.0.0</Version>
               <Title>Project Overwatch</Title>
-              <Publisher>Your Company</Publisher>
-
-              <!-- ✅ System-wide install location -->
+              <Publisher>Reak</Publisher>
               <TargetDir>/opt/project-overwatch</TargetDir>
-
-              <!-- ✅ Disable online update system COMPLETELY -->
               <EnableExternalRepositories>false</EnableExternalRepositories>
               <RequiresAdminRights>true</RequiresAdminRights>
-
-              <!-- ✅ Run app after install -->
               <RunProgram>/opt/project-overwatch/project-overwatch.AppImage</RunProgram>
           </Installer>
-
           EOF
-
           cat <<EOF > installer/input/packages/com.project.overwatch/meta/package.xml
           <?xml version="1.0" encoding="UTF-8"?>
           <Package>
